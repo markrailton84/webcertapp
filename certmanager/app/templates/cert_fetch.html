@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Fetch Certificate — CertManager{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="{{ url_for('certs.dashboard') }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+  <h4 class="mb-0 mt-1"><i class="bi bi-globe me-2"></i>Fetch Certificate from Host</h4>
+</div>
+
+<div class="card shadow-sm" style="max-width:600px">
+  <div class="card-body">
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label">Hostname / URL <span class="text-danger">*</span></label>
+          <input type="text" name="hostname" class="form-control" placeholder="e.g. example.com or https://example.com"
+                 value="{{ request.form.get('hostname', '') }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Port</label>
+          <input type="number" name="port" class="form-control" value="{{ request.form.get('port', 443) }}" min="1" max="65535">
+        </div>
+      </div>
+      <div class="mt-3">
+        <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search me-1"></i>Fetch</button>
+      </div>
+
+      {% if fetched %}
+      <hr class="my-4">
+      <h6 class="mb-3">Certificate Found</h6>
+      <table class="table table-sm table-borderless">
+        <tr><th style="width:160px">Common Name</th><td>{{ fetched.common_name }}</td></tr>
+        <tr><th>Issuer</th><td><small>{{ fetched.issuer }}</small></td></tr>
+        <tr><th>Valid From</th><td>{{ fetched.not_before.strftime('%Y-%m-%d') if fetched.not_before else '—' }}</td></tr>
+        <tr><th>Expiry</th><td>{{ fetched.not_after.strftime('%Y-%m-%d') }}</td></tr>
+        <tr><th>Serial</th><td><code>{{ fetched.serial_number }}</code></td></tr>
+        {% if fetched.sans %}
+        <tr><th>SANs</th><td>{% for s in fetched.sans %}<code class="me-1">{{ s }}</code>{% endfor %}</td></tr>
+        {% endif %}
+      </table>
+
+      <div class="row g-3 mt-1">
+        <div class="col-md-6">
+          <label class="form-label">Tags</label>
+          <input type="text" name="tags" class="form-control" placeholder="prod, web">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Notes</label>
+          <input type="text" name="notes" class="form-control">
+        </div>
+      </div>
+      <div class="mt-3">
+        <button type="submit" name="save" value="1" class="btn btn-success"><i class="bi bi-save me-1"></i>Save to CertManager</button>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}

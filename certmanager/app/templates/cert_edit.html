@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Edit Certificate — CertManager{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="{{ url_for('certs.cert_detail', cert_id=cert.id) }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  <h4 class="mb-0 mt-1"><i class="bi bi-pencil me-2"></i>Edit Certificate</h4>
+</div>
+
+<div class="card shadow-sm" style="max-width:700px">
+  <div class="card-body">
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label">Common Name <span class="text-danger">*</span></label>
+          <input type="text" name="common_name" class="form-control" value="{{ cert.common_name }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Hostname / System</label>
+          <input type="text" name="hostname" class="form-control" value="{{ cert.hostname or '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Expiry Date (Valid To) <span class="text-danger">*</span></label>
+          <input type="date" name="not_after" class="form-control" value="{{ cert.not_after.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Valid From</label>
+          <input type="date" name="not_before" class="form-control" value="{{ cert.not_before.strftime('%Y-%m-%d') if cert.not_before else '' }}">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Issuer</label>
+          <input type="text" name="issuer" class="form-control" value="{{ cert.issuer or '' }}">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Subject</label>
+          <input type="text" name="subject" class="form-control" value="{{ cert.subject or '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Serial Number</label>
+          <input type="text" name="serial_number" class="form-control" value="{{ cert.serial_number or '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Thumbprint (SHA256)</label>
+          <input type="text" name="thumbprint" class="form-control" value="{{ cert.thumbprint or '' }}">
+        </div>
+        <div class="col-12">
+          <label class="form-label">SANs <small class="text-muted">(one per line)</small></label>
+          <textarea name="sans" class="form-control" rows="3">{{ cert.sans | join('\n') }}</textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Tags</label>
+          <input type="text" name="tags" class="form-control" value="{{ cert.tags or '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Notes</label>
+          <input type="text" name="notes" class="form-control" value="{{ cert.notes or '' }}">
+        </div>
+      </div>
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Changes</button>
+        <a href="{{ url_for('certs.cert_detail', cert_id=cert.id) }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

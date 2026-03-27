@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ cert.common_name }} — CertManager{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <a href="{{ url_for('certs.dashboard') }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+    <h4 class="mb-0 mt-1">{{ cert.common_name }}</h4>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('certs.cert_edit', cert_id=cert.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1"></i>Edit</a>
+    <form method="post" action="{{ url_for('certs.cert_delete', cert_id=cert.id) }}" onsubmit="return confirm('Delete this certificate?')">
+      <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete</button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-info-circle me-2"></i>Certificate Details</span>
+        <span class="badge bg-{{ cert.status_badge }} fs-6">{{ cert.status.upper() }} — {{ cert.days_remaining }} days</span>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm table-borderless">
+          <tr><th style="width:180px">Common Name</th><td>{{ cert.common_name }}</td></tr>
+          <tr><th>Hostname / System</th><td>{{ cert.hostname or '—' }}</td></tr>
+          <tr><th>Issuer</th><td><small>{{ cert.issuer or '—' }}</small></td></tr>
+          <tr><th>Subject</th><td><small>{{ cert.subject or '—' }}</small></td></tr>
+          <tr><th>Serial Number</th><td><code>{{ cert.serial_number or '—' }}</code></td></tr>
+          <tr><th>Thumbprint (SHA256)</th><td><code style="font-size:0.75em">{{ cert.thumbprint or '—' }}</code></td></tr>
+          <tr><th>Valid From</th><td>{{ cert.not_before.strftime('%Y-%m-%d') if cert.not_before else '—' }}</td></tr>
+          <tr><th>Valid To (Expiry)</th><td>{{ cert.not_after.strftime('%Y-%m-%d') }}</td></tr>
+          <tr><th>Source</th><td><span class="badge bg-secondary">{{ cert.source }}</span></td></tr>
+          <tr><th>Added By</th><td>{{ cert.added_by_user.username if cert.added_by_user else '—' }}</td></tr>
+          <tr><th>Added On</th><td>{{ cert.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+        </table>
+
+        {% if cert.sans %}
+        <hr>
+        <h6>Subject Alternative Names (SANs)</h6>
+        <ul class="list-unstyled mb-0">
+          {% for san in cert.sans %}
+          <li><code>{{ san }}</code></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    {% if cert.tags %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-tags me-2"></i>Tags</div>
+      <div class="card-body">
+        {% for tag in cert.tags.split(',') %}
+          <span class="badge bg-light text-dark border me-1">{{ tag.strip() }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if cert.notes %}
+    <div class="card shadow-sm mb-3">
+      <div class="card-header"><i class="bi bi-journal-text me-2"></i>Notes</div>
+      <div class="card-body">{{ cert.notes }}</div>
+    </div>
+    {% endif %}
+
+    {% if cert.alert_logs %}
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-bell me-2"></i>Alert History</div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for log in cert.alert_logs %}
+          <li class="list-group-item small">
+            <span class="badge bg-secondary">{{ log.channel }}</span>
+            {{ log.days_threshold }}d threshold — {{ log.sent_at.strftime('%Y-%m-%d %H:%M') }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

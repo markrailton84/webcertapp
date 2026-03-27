@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Upload Certificate — CertManager{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="{{ url_for('certs.dashboard') }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>Dashboard</a>
+  <h4 class="mb-0 mt-1"><i class="bi bi-upload me-2"></i>Upload Certificate File</h4>
+</div>
+
+<div class="card shadow-sm" style="max-width:600px">
+  <div class="card-body">
+    <p class="text-muted small">Supported formats: <code>.pem</code>, <code>.crt</code>, <code>.cer</code>, <code>.der</code>, <code>.p7b</code></p>
+    <form method="post" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label class="form-label">Certificate File <span class="text-danger">*</span></label>
+        <input type="file" name="cert_file" class="form-control" accept=".pem,.crt,.cer,.der,.p7b,.p7c" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Hostname / System <small class="text-muted">(optional override)</small></label>
+        <input type="text" name="hostname" class="form-control" placeholder="e.g. webserver01">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Tags <small class="text-muted">(comma-separated)</small></label>
+        <input type="text" name="tags" class="form-control" placeholder="prod, web">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Notes</label>
+        <textarea name="notes" class="form-control" rows="2"></textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Upload & Import</button>
+        <a href="{{ url_for('certs.dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

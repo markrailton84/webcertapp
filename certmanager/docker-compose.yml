@@ -1,0 +1,27 @@
+services:
+  certmanager:
+    build: .
+    container_name: certmanager
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - certmanager_data:/app/data
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-change-me-to-a-random-secret-key}
+      DATABASE_URL: sqlite:////app/data/certmanager.db
+      # Default admin credentials (change on first run)
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      # SMTP (optional)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Teams (optional)
+      TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:-}
+
+volumes:
+  certmanager_data:

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Users — CertManager{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0"><i class="bi bi-people me-2"></i>Users</h4>
+  <a href="{{ url_for('auth.add_user') }}" class="btn btn-sm btn-primary"><i class="bi bi-person-plus me-1"></i>Add User</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user.username }}</td>
+          <td>{{ user.email }}</td>
+          <td><span class="badge bg-{{ 'primary' if user.is_admin else 'secondary' }}">{{ user.role }}</span></td>
+          <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+          <td>
+            {% if user.id != current_user.id %}
+            <form method="post" action="{{ url_for('auth.delete_user', user_id=user.id) }}"
+                  onsubmit="return confirm('Delete user {{ user.username }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
