@@ -1,5 +1,9 @@
 # CertManager
 
+[![CI — Lint & Test](https://github.com/markrailton84/webcertapp/actions/workflows/ci.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/ci.yml)
+[![Docker Build](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml)
+[![CodeQL](https://github.com/markrailton84/webcertapp/actions/workflows/codeql.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/codeql.yml)
+
 A team certificate management web app built with Python/Flask. Track TLS/SSL certificates across your systems, get notified before they expire via Email and Microsoft Teams.
 
 ## Features

@@ -1,0 +1,44 @@
+name: Docker Build
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+  schedule:
+    # Runs every Monday at 08:00 UTC (alongside CI)
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: webcertapp:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify container starts
+        run: |
+          docker run --rm -d \
+            --name certmanager_test \
+            -e SECRET_KEY=test-secret \
+            -e DATABASE_URL=sqlite:////tmp/test.db \
+            -p 5000:5000 \
+            webcertapp:${{ github.sha }}
+          sleep 5
+          curl --fail http://localhost:5000/login || (docker logs certmanager_test && exit 1)
+          docker stop certmanager_test
