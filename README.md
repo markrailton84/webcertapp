@@ -113,7 +113,7 @@ curl -H "X-API-Key: <your-key>" http://localhost:5000/api/v1/certs
 **PowerShell:**
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" `
-  -Headers @{"X-API-Key" = "<your-key>"}
+  -Headers @{"X-API-Key" = "<your-key>"} -UseBasicParsing
 ```
 
 ### Endpoints
@@ -157,7 +157,7 @@ curl -H "X-API-Key: <key>" \
 PowerShell:
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs?status=critical&per_page=100" `
-  -Headers @{"X-API-Key" = "<key>"}
+  -Headers @{"X-API-Key" = "<key>"} -UseBasicParsing
 ```
 
 **Response:**
@@ -215,7 +215,8 @@ PowerShell:
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" -Method POST `
   -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
-  -Body '{"common_name":"example.com","not_after":"2026-01-01T00:00:00Z","hostname":"webserver01","tags":"prod,web"}'
+  -Body '{"common_name":"example.com","not_after":"2026-01-01T00:00:00Z","hostname":"webserver01","tags":"prod,web"}' `
+  -UseBasicParsing
 ```
 
 Returns `201 Created` with the certificate JSON.
@@ -248,7 +249,8 @@ PowerShell:
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/bulk" -Method POST `
   -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
-  -Body '[{"common_name":"a.example.com","not_after":"2026-03-01T00:00:00Z"},{"common_name":"b.example.com","not_after":"2026-06-01T00:00:00Z"}]'
+  -Body '[{"common_name":"a.example.com","not_after":"2026-03-01T00:00:00Z"},{"common_name":"b.example.com","not_after":"2026-06-01T00:00:00Z"}]' `
+  -UseBasicParsing
 ```
 
 **Response** (`201` if all succeeded, `207` if partial errors):
@@ -294,7 +296,8 @@ PowerShell:
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/fetch" -Method POST `
   -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
-  -Body '{"hostname":"example.com","tags":"prod,auto-fetched"}'
+  -Body '{"hostname":"example.com","tags":"prod,auto-fetched"}' `
+  -UseBasicParsing
 ```
 
 Returns `201 Created` with the saved certificate, or the fetched data preview if `save=false`.
@@ -316,7 +319,7 @@ curl -X DELETE http://localhost:5000/api/v1/certs/5 \
 PowerShell:
 ```powershell
 Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/5" -Method DELETE `
-  -Headers @{"X-API-Key" = "<key>"}
+  -Headers @{"X-API-Key" = "<key>"} -UseBasicParsing
 ```
 
 Returns `200` with `{"deleted": 5}`.
