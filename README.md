@@ -105,8 +105,15 @@ All API endpoints (except `/api/v1/health`) require an `X-API-Key` header.
 
 Find or regenerate the API key at **Settings > REST API Key** (admin only).
 
+**Bash / Linux / macOS:**
 ```bash
 curl -H "X-API-Key: <your-key>" http://localhost:5000/api/v1/certs
+```
+
+**PowerShell:**
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" `
+  -Headers @{"X-API-Key" = "<your-key>"}
 ```
 
 ### Endpoints
@@ -140,9 +147,17 @@ Optional query parameters:
 | `per_page` | Results per page (default `50`, max `200`) |
 
 **Example — list expiring certs:**
+
+Bash:
 ```bash
 curl -H "X-API-Key: <key>" \
   "http://localhost:5000/api/v1/certs?status=critical&per_page=100"
+```
+
+PowerShell:
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs?status=critical&per_page=100" `
+  -Headers @{"X-API-Key" = "<key>"}
 ```
 
 **Response:**
@@ -179,6 +194,8 @@ Content-Type: application/json
 **Required fields:** `common_name`, `not_after`
 
 **Example:**
+
+Bash:
 ```bash
 curl -X POST http://localhost:5000/api/v1/certs \
   -H "X-API-Key: <key>" \
@@ -192,6 +209,13 @@ curl -X POST http://localhost:5000/api/v1/certs \
     "tags": "prod,web",
     "sans": ["DNS:example.com", "DNS:www.example.com"]
   }'
+```
+
+PowerShell:
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" -Method POST `
+  -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
+  -Body '{"common_name":"example.com","not_after":"2026-01-01T00:00:00Z","hostname":"webserver01","tags":"prod,web"}'
 ```
 
 Returns `201 Created` with the certificate JSON.
@@ -208,6 +232,8 @@ Content-Type: application/json
 Send a JSON array of certificate objects (same fields as single add). Up to 500 per request.
 
 **Example:**
+
+Bash:
 ```bash
 curl -X POST http://localhost:5000/api/v1/certs/bulk \
   -H "X-API-Key: <key>" \
@@ -216,6 +242,13 @@ curl -X POST http://localhost:5000/api/v1/certs/bulk \
     {"common_name": "a.example.com", "not_after": "2026-03-01T00:00:00Z"},
     {"common_name": "b.example.com", "not_after": "2026-06-01T00:00:00Z"}
   ]'
+```
+
+PowerShell:
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/bulk" -Method POST `
+  -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
+  -Body '[{"common_name":"a.example.com","not_after":"2026-03-01T00:00:00Z"},{"common_name":"b.example.com","not_after":"2026-06-01T00:00:00Z"}]'
 ```
 
 **Response** (`201` if all succeeded, `207` if partial errors):
@@ -248,11 +281,20 @@ Connects to the given hostname over TLS, retrieves the certificate, and saves it
 | `notes` | string | Notes to apply to the saved cert |
 
 **Example:**
+
+Bash:
 ```bash
 curl -X POST http://localhost:5000/api/v1/certs/fetch \
   -H "X-API-Key: <key>" \
   -H "Content-Type: application/json" \
   -d '{"hostname": "example.com", "tags": "prod,auto-fetched"}'
+```
+
+PowerShell:
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/fetch" -Method POST `
+  -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
+  -Body '{"hostname":"example.com","tags":"prod,auto-fetched"}'
 ```
 
 Returns `201 Created` with the saved certificate, or the fetched data preview if `save=false`.
@@ -265,9 +307,16 @@ Returns `201 Created` with the saved certificate, or the fetched data preview if
 DELETE /api/v1/certs/<id>
 ```
 
+Bash:
 ```bash
 curl -X DELETE http://localhost:5000/api/v1/certs/5 \
   -H "X-API-Key: <key>"
+```
+
+PowerShell:
+```powershell
+Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/5" -Method DELETE `
+  -Headers @{"X-API-Key" = "<key>"}
 ```
 
 Returns `200` with `{"deleted": 5}`.

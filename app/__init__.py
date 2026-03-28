@@ -44,10 +44,26 @@ def create_app(test_config=None):
 
     with app.app_context():
         db.create_all()
+        _migrate_db()
         _ensure_admin()
         init_scheduler(app)
 
     return app
+
+
+def _migrate_db():
+    """Apply any column additions that db.create_all() won't add to existing tables."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    # Add api_key to settings if it was created before this column existed
+    settings_cols = {c["name"] for c in inspector.get_columns("settings")}
+    if "api_key" not in settings_cols:
+        import secrets
+        new_key = secrets.token_hex(32)
+        db.session.execute(
+            text(f"ALTER TABLE settings ADD COLUMN api_key VARCHAR(64) DEFAULT '{new_key}'")
+        )
+        db.session.commit()
 
 
 def _ensure_admin():
