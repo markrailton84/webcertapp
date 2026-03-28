@@ -41,7 +41,7 @@ def make_settings(
     s.smtp_password = smtp_password
     s.smtp_from = smtp_from
     s.smtp_tls = smtp_tls
-    s.email_recipients = email_recipients or ["recipient@test.com"]
+    s.email_recipients = email_recipients if email_recipients is not None else ["recipient@test.com"]
     s.teams_enabled = teams_enabled
     s.teams_webhook_url = teams_webhook_url
     return s

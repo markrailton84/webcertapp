@@ -38,7 +38,7 @@ def create_app():
     app.register_blueprint(settings_bp)
 
     with app.app_context():
-        db.create_all(checkfirst=True)
+        db.create_all()
         _ensure_admin()
         init_scheduler(app)
 
