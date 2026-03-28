@@ -1,6 +1,5 @@
 # CertManager
 
-[![CI — Lint & Test](https://github.com/markrailton84/webcertapp/actions/workflows/ci.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/ci.yml)
 [![Docker Build](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml)
 [![CodeQL](https://github.com/markrailton84/webcertapp/actions/workflows/codeql.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/codeql.yml)
 
