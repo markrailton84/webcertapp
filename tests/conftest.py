@@ -68,8 +68,7 @@ def make_self_signed_cert(
 @pytest.fixture(scope="session")
 def app():
     """Create a Flask app configured for testing with an in-memory SQLite DB."""
-    test_app = create_app()
-    test_app.config.update({
+    test_app = create_app(test_config={
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
         "WTF_CSRF_ENABLED": False,
@@ -78,7 +77,6 @@ def app():
     })
 
     with test_app.app_context():
-        _db.create_all()
         yield test_app
         _db.drop_all()
 
