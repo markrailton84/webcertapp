@@ -112,8 +112,8 @@ curl -H "X-API-Key: <your-key>" http://localhost:5000/api/v1/certs
 
 **PowerShell:**
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" `
-  -Headers @{"X-API-Key" = "<your-key>"} -UseBasicParsing
+(Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" `
+  -Headers @{"X-API-Key" = "<your-key>"} -UseBasicParsing).Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 ### Endpoints
@@ -156,8 +156,8 @@ curl -H "X-API-Key: <key>" \
 
 PowerShell:
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs?status=critical&per_page=100" `
-  -Headers @{"X-API-Key" = "<key>"} -UseBasicParsing
+(Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs?status=critical&per_page=100" `
+  -Headers @{"X-API-Key" = "<key>"} -UseBasicParsing).Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 **Response:**
@@ -213,10 +213,10 @@ curl -X POST http://localhost:5000/api/v1/certs \
 
 PowerShell:
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" -Method POST `
+(Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs" -Method POST `
   -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
   -Body '{"common_name":"example.com","not_after":"2026-01-01T00:00:00Z","hostname":"webserver01","tags":"prod,web"}' `
-  -UseBasicParsing
+  -UseBasicParsing).Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 Returns `201 Created` with the certificate JSON.
@@ -247,10 +247,10 @@ curl -X POST http://localhost:5000/api/v1/certs/bulk \
 
 PowerShell:
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/bulk" -Method POST `
+(Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/bulk" -Method POST `
   -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
   -Body '[{"common_name":"a.example.com","not_after":"2026-03-01T00:00:00Z"},{"common_name":"b.example.com","not_after":"2026-06-01T00:00:00Z"}]' `
-  -UseBasicParsing
+  -UseBasicParsing).Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 **Response** (`201` if all succeeded, `207` if partial errors):
@@ -294,10 +294,10 @@ curl -X POST http://localhost:5000/api/v1/certs/fetch \
 
 PowerShell:
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/fetch" -Method POST `
+(Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/fetch" -Method POST `
   -Headers @{"X-API-Key" = "<key>"; "Content-Type" = "application/json"} `
   -Body '{"hostname":"example.com","tags":"prod,auto-fetched"}' `
-  -UseBasicParsing
+  -UseBasicParsing).Content | ConvertFrom-Json | ConvertTo-Json -Depth 10
 ```
 
 Returns `201 Created` with the saved certificate, or the fetched data preview if `save=false`.
@@ -318,8 +318,8 @@ curl -X DELETE http://localhost:5000/api/v1/certs/5 \
 
 PowerShell:
 ```powershell
-Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/5" -Method DELETE `
-  -Headers @{"X-API-Key" = "<key>"} -UseBasicParsing
+(Invoke-WebRequest -Uri "http://localhost:5000/api/v1/certs/5" -Method DELETE `
+  -Headers @{"X-API-Key" = "<key>"} -UseBasicParsing).Content | ConvertFrom-Json
 ```
 
 Returns `200` with `{"deleted": 5}`.
