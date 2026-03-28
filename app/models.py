@@ -1,4 +1,5 @@
 import json
+import secrets
 from datetime import datetime, timezone
 
 from flask_login import UserMixin
@@ -120,6 +121,8 @@ class Settings(db.Model):
     teams_enabled = db.Column(db.Boolean, default=False)
     teams_webhook_url = db.Column(db.Text)
 
+    api_key = db.Column(db.String(64), default=lambda: secrets.token_hex(32))
+
     @property
     def alert_days(self):
         return sorted(json.loads(self._alert_days or "[90,60,30,14,7]"), reverse=True)
@@ -135,6 +138,9 @@ class Settings(db.Model):
     @email_recipients.setter
     def email_recipients(self, value):
         self._email_recipients = json.dumps(value)
+
+    def regenerate_api_key(self):
+        self.api_key = secrets.token_hex(32)
 
     @classmethod
     def get(cls):

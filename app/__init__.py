@@ -32,10 +32,12 @@ def create_app(test_config=None):
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    from .routes.api import api_bp
     from .routes.auth import auth_bp
     from .routes.certs import certs_bp
     from .routes.settings import settings_bp
 
+    app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(certs_bp)
     app.register_blueprint(settings_bp)

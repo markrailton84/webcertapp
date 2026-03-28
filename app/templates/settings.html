@@ -105,4 +105,32 @@
     <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Settings</button>
   </div>
 </form>
+
+<!-- API Key (separate form, not inside main settings form) -->
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header"><i class="bi bi-key me-2"></i>REST API Key</div>
+      <div class="card-body">
+        <p class="text-muted mb-2">Include this key in the <code>X-API-Key</code> header when calling the REST API.</p>
+        <div class="input-group" style="max-width:520px">
+          <input type="text" class="form-control font-monospace" id="apiKeyField"
+                 value="{{ settings.api_key }}" readonly>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="navigator.clipboard.writeText(document.getElementById('apiKeyField').value)">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+      </div>
+      <div class="card-footer">
+        <form method="post" action="{{ url_for('settings.regenerate_api_key') }}"
+              onsubmit="return confirm('Regenerate API key? Any existing integrations using the current key will stop working.');">
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Key
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

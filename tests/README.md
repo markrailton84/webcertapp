@@ -17,7 +17,8 @@ tests/
 ├── test_notifier.py             # Email and Teams alert sending (mocked SMTP/HTTP)
 ├── test_routes_auth.py          # Login, logout, user management routes
 ├── test_routes_certs.py         # Dashboard, add, edit, delete, upload, fetch routes
-└── test_routes_settings.py      # Settings save, test email, test Teams routes
+├── test_routes_settings.py      # Settings save, test email, test Teams routes
+└── test_routes_api.py           # REST API — auth, query, add, bulk, fetch, delete
 ```
 
 ---
@@ -133,6 +134,18 @@ ruff check app/ tests/ --fix
 - Password not overwritten when left blank on re-save
 - Test email / Teams endpoints — success and failure paths
 - Non-admin users receive 403 on test endpoints
+- API key displayed, regenerate rotates it
+
+### `test_routes_api.py`
+- `GET /api/v1/health` — returns 200 without authentication
+- `GET /api/v1/certs` — requires valid `X-API-Key`, returns paginated list
+- Filtering by `status`, `tag`, and `search` query parameters
+- `GET /api/v1/certs/<id>` — returns certificate JSON, 404 on missing
+- `POST /api/v1/certs` — creates a certificate, validates required fields
+- `POST /api/v1/certs/bulk` — creates multiple certs, partial-error `207` response
+- `POST /api/v1/certs/fetch` — mocked TLS fetch, saves and returns cert; `save=false` preview
+- `DELETE /api/v1/certs/<id>` — removes cert, returns deleted ID
+- Missing/invalid API key returns `401`
 
 ---
 
