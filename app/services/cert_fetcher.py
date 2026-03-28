@@ -1,7 +1,9 @@
-import ssl
 import socket
+import ssl
+
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+
 from .cert_parser import _extract_cert_data
 
 

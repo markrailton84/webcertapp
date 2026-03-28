@@ -6,8 +6,9 @@ calls are made during testing.
 """
 
 import datetime
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from app.services.cert_fetcher import fetch_cert_from_host
 from tests.conftest import make_self_signed_cert

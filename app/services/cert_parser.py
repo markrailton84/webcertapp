@@ -1,8 +1,9 @@
 import hashlib
 from datetime import timezone
+
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from cryptography.x509.oid import NameOID, ExtensionOID
+from cryptography.x509.oid import ExtensionOID, NameOID
 
 
 def _extract_cert_data(cert: x509.Certificate) -> dict:

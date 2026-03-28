@@ -11,15 +11,15 @@ Provides:
 
 import datetime
 import io
-import pytest
 
+import pytest
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 from app import create_app
-from app.models import db as _db, User, Certificate, Settings
+from app.models import Certificate, User, db as _db
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import logging
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -24,7 +25,7 @@ def init_scheduler(app):
 
 def _run_expiry_check(app):
     with app.app_context():
-        from ..models import db, Certificate, Settings, AlertLog
+        from ..models import AlertLog, Certificate, Settings, db
         from .notifier import send_expiry_email, send_expiry_teams
 
         settings = Settings.get()

@@ -5,12 +5,12 @@ Covers PEM parsing, DER parsing, field extraction (CN, SANs, serial,
 thumbprint, validity dates), and error handling for invalid input.
 """
 
-import io
 import datetime
-import pytest
 from unittest.mock import MagicMock
 
-from app.services.cert_parser import parse_cert_pem, parse_cert_der, parse_cert_file
+import pytest
+
+from app.services.cert_parser import parse_cert_der, parse_cert_file, parse_cert_pem
 from tests.conftest import make_self_signed_cert
 
 

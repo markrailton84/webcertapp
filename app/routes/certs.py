@@ -1,9 +1,11 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-from flask_login import login_required, current_user
 from datetime import datetime, timezone
-from ..models import db, Certificate
-from ..services.cert_parser import parse_cert_file, parse_cert_pem
+
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
+from ..models import Certificate, db
 from ..services.cert_fetcher import fetch_cert_from_host
+from ..services.cert_parser import parse_cert_file
 
 certs_bp = Blueprint("certs", __name__)
 

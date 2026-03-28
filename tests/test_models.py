@@ -4,8 +4,10 @@ Settings defaults, and AlertLog relationships.
 """
 
 import datetime
+
 import pytest
-from app.models import Certificate, User, Settings, AlertLog
+
+from app.models import AlertLog, Certificate, Settings, User
 
 
 class TestCertificateStatus:

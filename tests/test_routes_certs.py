@@ -4,8 +4,6 @@ upload, and fetch.
 """
 
 import io
-import datetime
-import pytest
 from unittest.mock import patch
 
 
@@ -160,11 +158,11 @@ class TestCertFetch:
         assert resp.status_code == 200
 
     def test_fetch_displays_result(self, auth_client, sample_pem_bytes):
-        from tests.conftest import make_self_signed_cert
         from cryptography import x509
         from cryptography.hazmat.backends import default_backend
-        from cryptography.hazmat.primitives import serialization
+
         from app.services.cert_parser import _extract_cert_data
+        from tests.conftest import make_self_signed_cert
 
         pem = make_self_signed_cert(cn="fetched.example.com", days_valid=90)
         cert_obj = x509.load_pem_x509_certificate(pem, default_backend())

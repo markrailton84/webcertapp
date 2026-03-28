@@ -1,9 +1,8 @@
 import smtplib
-import json
-import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from datetime import timezone
+
+import requests
 
 
 def _days_label(days: int) -> str:

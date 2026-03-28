@@ -2,8 +2,7 @@
 Integration tests for settings routes: save config, test email, test Teams.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app.models import Settings
 

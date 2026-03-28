@@ -3,8 +3,6 @@ Integration tests for auth routes: login, logout, user management.
 Uses Flask test client with an in-memory DB.
 """
 
-import pytest
-
 
 class TestLogin:
     def test_login_page_loads(self, client):
