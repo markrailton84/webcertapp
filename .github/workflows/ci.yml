@@ -41,6 +41,8 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v --tb=short --junitxml=test-results.xml
+        env:
+          PYTHONPATH: ${{ github.workspace }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
