@@ -2,5 +2,8 @@
 select = ["E", "F", "W", "I"]
 ignore = ["E501"]  # line too long — handled by formatter
 
+[lint.isort]
+known-first-party = ["app"]  # treat app.* and relative imports as first-party
+
 [lint.per-file-ignores]
 "tests/*" = ["F841"]  # unused variable in tests is fine

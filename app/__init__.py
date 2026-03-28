@@ -3,7 +3,7 @@ import os
 from flask import Flask
 from flask_login import LoginManager
 
-from .models import User, db
+from .models import db, User
 from .services.scheduler import init_scheduler
 
 

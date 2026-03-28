@@ -4,8 +4,9 @@ Tests for app/services/notifier.py
 All SMTP and HTTP calls are mocked — no real emails or Teams messages sent.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from app.services.notifier import (
     _days_label,

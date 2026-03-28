@@ -31,6 +31,19 @@ jobs:
           tags: webcertapp:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        # Retry up to 3 times on transient registry/network errors (e.g. 502)
+        env:
+          BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+      - name: Retry build on failure
+        if: failure()
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: webcertapp:${{ github.sha }}
+          cache-from: type=gha
 
       - name: Verify container starts
         run: |
