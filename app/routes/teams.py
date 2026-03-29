@@ -212,3 +212,17 @@ def team_settings(team_id):
         return redirect(url_for("teams.team_settings", team_id=team.id))
 
     return render_template("team_settings.html", team=team)
+
+
+@teams_bp.route("/teams/<int:team_id>/regenerate-api-key", methods=["POST"])
+@login_required
+def regenerate_api_key(team_id):
+    team = Team.query.get_or_404(team_id)
+    denied = _require_team_owner(team)
+    if denied:
+        return denied
+
+    team.regenerate_api_key()
+    db.session.commit()
+    flash("API key regenerated.", "success")
+    return redirect(url_for("teams.team_settings", team_id=team.id))

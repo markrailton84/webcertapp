@@ -1,15 +1,16 @@
 """
 REST API blueprint — /api/v1/
 
-Authentication: include the API key in the X-API-Key request header.
-The key is generated automatically and shown in Settings (admin only).
+Authentication: include a team API key in the X-API-Key request header.
+Each team has its own key (found in Team > Settings). The key scopes all
+operations to that team's certificates.
 """
 
 import datetime
 
 from flask import Blueprint, jsonify, request
 
-from ..models import Certificate, Settings, db
+from ..models import Certificate, Team, db
 from ..services.cert_fetcher import fetch_cert_from_host
 
 api_bp = Blueprint("api", __name__, url_prefix="/api/v1")
@@ -20,14 +21,17 @@ api_bp = Blueprint("api", __name__, url_prefix="/api/v1")
 # ---------------------------------------------------------------------------
 
 def _check_api_key():
-    """Return None if the request carries a valid API key, else a 401 response."""
+    """Validate the X-API-Key header and return the owning Team.
+
+    Returns (team, None) on success, or (None, error_response) on failure.
+    """
     key = request.headers.get("X-API-Key", "").strip()
     if not key:
-        return jsonify({"error": "Missing X-API-Key header"}), 401
-    settings = Settings.get()
-    if key != settings.api_key:
-        return jsonify({"error": "Invalid API key"}), 401
-    return None
+        return None, (jsonify({"error": "Missing X-API-Key header"}), 401)
+    team = Team.query.filter_by(api_key=key).first()
+    if not team:
+        return None, (jsonify({"error": "Invalid API key"}), 401)
+    return team, None
 
 
 def _cert_to_dict(cert):
@@ -47,6 +51,8 @@ def _cert_to_dict(cert):
         "tags": cert.tags,
         "notes": cert.notes,
         "source": cert.source,
+        "team_id": cert.team_id,
+        "team_name": cert.team.name if cert.team else None,
         "created_at": cert.created_at.isoformat() if cert.created_at else None,
         "updated_at": cert.updated_at.isoformat() if cert.updated_at else None,
     }
@@ -71,6 +77,8 @@ def list_certs():
     """
     GET /api/v1/certs
 
+    Returns certificates belonging to the team identified by the API key.
+
     Query parameters:
       status   — filter by status: ok | warning | critical | expired
       tag      — filter by tag substring
@@ -78,11 +86,11 @@ def list_certs():
       page     — page number (default 1)
       per_page — results per page (default 50, max 200)
     """
-    denied = _check_api_key()
+    team, denied = _check_api_key()
     if denied:
         return denied
 
-    query = Certificate.query
+    query = Certificate.query.filter_by(team_id=team.id)
 
     status_filter = request.args.get("status")
     tag_filter = request.args.get("tag")
@@ -126,12 +134,14 @@ def list_certs():
 
 @api_bp.route("/certs/<int:cert_id>")
 def get_cert(cert_id):
-    """GET /api/v1/certs/<id> — retrieve a single certificate."""
-    denied = _check_api_key()
+    """GET /api/v1/certs/<id> — retrieve a single certificate (must belong to team)."""
+    team, denied = _check_api_key()
     if denied:
         return denied
 
     cert = db.get_or_404(Certificate, cert_id)
+    if cert.team_id != team.id:
+        return jsonify({"error": "Certificate does not belong to this team"}), 403
     return jsonify(_cert_to_dict(cert))
 
 
@@ -139,8 +149,11 @@ def get_cert(cert_id):
 # Add / bulk-add certificates
 # ---------------------------------------------------------------------------
 
-def _build_cert_from_dict(data, source="api"):
-    """Build a Certificate instance from a JSON dict. Returns (cert, error_str)."""
+def _build_cert_from_dict(data, team_id, source="api"):
+    """Build a Certificate instance from a JSON dict, assigned to team_id.
+
+    Returns (cert, error_str).
+    """
     not_after_raw = data.get("not_after")
     if not not_after_raw:
         return None, "not_after is required"
@@ -173,6 +186,7 @@ def _build_cert_from_dict(data, source="api"):
         hostname=data.get("hostname", "").strip() or None,
         notes=data.get("notes", "").strip() or None,
         tags=data.get("tags", "").strip() or None,
+        team_id=team_id,
         source=source,
     )
     sans = data.get("sans")
@@ -187,7 +201,7 @@ def add_cert():
     """
     POST /api/v1/certs
 
-    Add a single certificate.
+    Add a single certificate to the team identified by the API key.
 
     JSON body fields:
       common_name  (required)
@@ -197,7 +211,7 @@ def add_cert():
       hostname, notes, tags  (strings)
       sans         (array of strings, e.g. ["DNS:example.com"])
     """
-    denied = _check_api_key()
+    team, denied = _check_api_key()
     if denied:
         return denied
 
@@ -205,7 +219,7 @@ def add_cert():
     if not data or not isinstance(data, dict):
         return jsonify({"error": "Request body must be a JSON object"}), 400
 
-    cert, err = _build_cert_from_dict(data)
+    cert, err = _build_cert_from_dict(data, team_id=team.id)
     if err:
         return jsonify({"error": err}), 422
 
@@ -219,13 +233,13 @@ def bulk_add_certs():
     """
     POST /api/v1/certs/bulk
 
-    Add multiple certificates in one request.
+    Add multiple certificates to the team identified by the API key.
 
     JSON body: array of certificate objects (same fields as POST /certs).
 
     Returns a summary with created IDs and any per-item errors.
     """
-    denied = _check_api_key()
+    team, denied = _check_api_key()
     if denied:
         return denied
 
@@ -244,7 +258,7 @@ def bulk_add_certs():
         if not isinstance(item, dict):
             errors.append({"index": idx, "error": "Item must be a JSON object"})
             continue
-        cert, err = _build_cert_from_dict(item)
+        cert, err = _build_cert_from_dict(item, team_id=team.id)
         if err:
             errors.append({"index": idx, "common_name": item.get("common_name"), "error": err})
             continue
@@ -271,7 +285,7 @@ def fetch_cert():
     """
     POST /api/v1/certs/fetch
 
-    Fetch a certificate from a live hostname via TLS and save it.
+    Fetch a certificate from a live hostname via TLS and save it to the team.
 
     JSON body:
       hostname  (required) — e.g. "example.com" or "example.com:8443"
@@ -280,7 +294,7 @@ def fetch_cert():
       tags      (optional string)
       notes     (optional string)
     """
-    denied = _check_api_key()
+    team, denied = _check_api_key()
     if denied:
         return denied
 
@@ -316,6 +330,7 @@ def fetch_cert():
         hostname=hostname,
         tags=data.get("tags", "").strip() or None,
         notes=data.get("notes", "").strip() or None,
+        team_id=team.id,
         source="fetch",
     )
     sans = cert_data.get("sans")
@@ -333,12 +348,14 @@ def fetch_cert():
 
 @api_bp.route("/certs/<int:cert_id>", methods=["DELETE"])
 def delete_cert(cert_id):
-    """DELETE /api/v1/certs/<id> — remove a certificate."""
-    denied = _check_api_key()
+    """DELETE /api/v1/certs/<id> — remove a certificate (must belong to team)."""
+    team, denied = _check_api_key()
     if denied:
         return denied
 
     cert = db.get_or_404(Certificate, cert_id)
+    if cert.team_id != team.id:
+        return jsonify({"error": "Certificate does not belong to this team"}), 403
     db.session.delete(cert)
     db.session.commit()
     return jsonify({"deleted": cert_id}), 200

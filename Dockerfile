@@ -12,11 +12,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data \
+    && useradd -r -s /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
 
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=production
 
 EXPOSE 5000
+
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/v1/health')" || exit 1
 
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "60", "--preload", "run:app"]

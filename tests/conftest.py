@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 from app import create_app
-from app.models import Certificate, User, db as _db
+from app.models import Certificate, Team, TeamMember, User, db as _db
 
 
 # ---------------------------------------------------------------------------
@@ -216,3 +216,58 @@ def expiring_pem_bytes():
 def pem_file(sample_pem_bytes):
     """A FileStorage-like object wrapping PEM bytes, for upload tests."""
     return io.BytesIO(sample_pem_bytes)
+
+
+# ---------------------------------------------------------------------------
+# Team fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="function")
+def team(db, admin_user):
+    """A team owned by the admin user."""
+    t = Team(name="Platform Team", description="Platform engineering", owner_id=admin_user.id)
+    db.session.add(t)
+    db.session.commit()
+    return t
+
+
+@pytest.fixture(scope="function")
+def team_member_user(db):
+    """A regular user intended for team membership tests."""
+    user = User(username="teammember", email="member@test.com", role="user")
+    user.set_password("memberpass")
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+@pytest.fixture(scope="function")
+def team_membership(db, team, team_member_user):
+    """A team member with view + add permissions."""
+    m = TeamMember(
+        team_id=team.id,
+        user_id=team_member_user.id,
+        can_view=True,
+        can_add=True,
+        can_edit=False,
+        can_delete=False,
+    )
+    db.session.add(m)
+    db.session.commit()
+    return m
+
+
+@pytest.fixture(scope="function")
+def team_cert(db, team, admin_user):
+    """A certificate assigned to a team."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cert = Certificate(
+        common_name="team.example.com",
+        not_after=now + datetime.timedelta(days=365),
+        source="manual",
+        team_id=team.id,
+        added_by_id=admin_user.id,
+    )
+    db.session.add(cert)
+    db.session.commit()
+    return cert

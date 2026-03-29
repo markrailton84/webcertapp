@@ -1,8 +1,14 @@
+import re
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 import requests
+
+
+def _sanitize_header(value: str) -> str:
+    """Remove newlines and carriage returns to prevent email header injection."""
+    return re.sub(r'[\r\n]+', ' ', str(value)).strip()
 
 
 def _days_label(days: int) -> str:
@@ -18,7 +24,8 @@ def send_expiry_email(settings, cert) -> None:
         return
 
     days = cert.days_remaining
-    subject = f"[CertManager] Certificate expiry alert: {cert.common_name} ({_days_label(days)})"
+    cn = _sanitize_header(cert.common_name)
+    subject = f"[CertManager] Certificate expiry alert: {cn} ({_days_label(days)})"
 
     body_html = f"""
     <h2>Certificate Expiry Alert</h2>
@@ -34,9 +41,9 @@ def send_expiry_email(settings, cert) -> None:
     """
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = settings.smtp_from or settings.smtp_user
-    msg["To"] = ", ".join(settings.email_recipients)
+    msg["Subject"] = _sanitize_header(subject)
+    msg["From"] = _sanitize_header(settings.smtp_from or settings.smtp_user)
+    msg["To"] = _sanitize_header(", ".join(settings.email_recipients))
     msg.attach(MIMEText(body_html, "html"))
 
     _smtp_send(settings, msg)

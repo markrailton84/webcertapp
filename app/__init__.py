@@ -1,13 +1,16 @@
+import datetime
 import os
 
 from flask import Flask
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
 
 from .models import db, User
 from .services.scheduler import init_scheduler
 
 
 login_manager = LoginManager()
+csrf = CSRFProtect()
 
 
 def create_app(test_config=None):
@@ -23,7 +26,10 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
 
+    app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(hours=8)
+
     db.init_app(app)
+    csrf.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     login_manager.login_message_category = "warning"
@@ -38,6 +44,7 @@ def create_app(test_config=None):
     from .routes.settings import settings_bp
     from .routes.teams import teams_bp
 
+    csrf.exempt(api_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(certs_bp)
@@ -55,18 +62,30 @@ def create_app(test_config=None):
 
 def _migrate_db():
     """Apply any column additions that db.create_all() won't add to existing tables."""
+    import secrets
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
 
     # Add api_key to settings if missing
     settings_cols = {c["name"] for c in inspector.get_columns("settings")}
     if "api_key" not in settings_cols:
-        import secrets
         new_key = secrets.token_hex(32)
         db.session.execute(
             text(f"ALTER TABLE settings ADD COLUMN api_key VARCHAR(64) DEFAULT '{new_key}'")
         )
         db.session.commit()
+
+    # Add api_key to teams if missing
+    if inspector.has_table("teams"):
+        teams_cols = {c["name"] for c in inspector.get_columns("teams")}
+        if "api_key" not in teams_cols:
+            db.session.execute(text("ALTER TABLE teams ADD COLUMN api_key VARCHAR(64)"))
+            db.session.commit()
+            # Generate keys for existing teams that don't have one
+            from .models import Team
+            for team in Team.query.filter(Team.api_key.is_(None)).all():
+                team.api_key = secrets.token_hex(32)
+            db.session.commit()
 
     # Add team_id to certificates if missing
     if inspector.has_table("certificates"):

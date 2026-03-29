@@ -140,9 +140,6 @@ class Settings(db.Model):
     def email_recipients(self, value):
         self._email_recipients = json.dumps(value)
 
-    def regenerate_api_key(self):
-        self.api_key = secrets.token_hex(32)
-
     @classmethod
     def get(cls):
         settings = cls.query.first()
@@ -179,6 +176,9 @@ class Team(db.Model):
     teams_enabled = db.Column(db.Boolean, default=False)
     teams_webhook_url = db.Column(db.Text)
 
+    # Per-team API key
+    api_key = db.Column(db.String(64), default=lambda: secrets.token_hex(32))
+
     owner = db.relationship("User", foreign_keys=[owner_id], backref="owned_teams")
     members = db.relationship("TeamMember", backref="team", lazy=True, cascade="all, delete-orphan")
     certificates = db.relationship("Certificate", backref="team", lazy=True)
@@ -204,6 +204,9 @@ class Team(db.Model):
 
     def is_owner(self, user):
         return self.owner_id == user.id
+
+    def regenerate_api_key(self):
+        self.api_key = secrets.token_hex(32)
 
 
 class TeamMember(db.Model):

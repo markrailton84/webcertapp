@@ -106,29 +106,13 @@
   </div>
 </form>
 
-<!-- API Key (separate form, not inside main settings form) -->
+<!-- API Key info -->
 <div class="row g-4 mt-1">
   <div class="col-12">
     <div class="card shadow-sm">
-      <div class="card-header"><i class="bi bi-key me-2"></i>REST API Key</div>
+      <div class="card-header"><i class="bi bi-key me-2"></i>REST API Keys</div>
       <div class="card-body">
-        <p class="text-muted mb-2">Include this key in the <code>X-API-Key</code> header when calling the REST API.</p>
-        <div class="input-group" style="max-width:520px">
-          <input type="text" class="form-control font-monospace" id="apiKeyField"
-                 value="{{ settings.api_key }}" readonly>
-          <button class="btn btn-outline-secondary" type="button"
-                  onclick="navigator.clipboard.writeText(document.getElementById('apiKeyField').value)">
-            <i class="bi bi-clipboard"></i>
-          </button>
-        </div>
-      </div>
-      <div class="card-footer">
-        <form method="post" action="{{ url_for('settings.regenerate_api_key') }}"
-              onsubmit="return confirm('Regenerate API key? Any existing integrations using the current key will stop working.');">
-          <button type="submit" class="btn btn-sm btn-outline-danger">
-            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Key
-          </button>
-        </form>
+        <p class="text-muted mb-0">API keys are now managed per-team. Each team has its own key that scopes API operations to that team's certificates. Go to <strong>Teams &gt; [Team Name] &gt; Settings</strong> to view or regenerate a team's API key.</p>
       </div>
     </div>
   </div>

@@ -89,9 +89,12 @@ ruff check app/ tests/ --fix
 - `Certificate.status` — ok / warning / critical / expired thresholds
 - `Certificate.days_remaining` — positive and negative values
 - `Certificate.sans` — JSON serialisation roundtrip
+- `Certificate.team_id` — team assignment
 - `User.check_password` — correct and incorrect passwords
 - `User.is_admin` — role check
 - `Settings.get()` — singleton creation and defaults
+- `Team` — creation, `is_owner()`, `get_member()`, alert_days/email_recipients properties
+- `TeamMember` — permission flags (can_view, can_add, can_edit, can_delete)
 - `AlertLog` — creation and certificate relationship
 
 ### `test_cert_parser.py`
@@ -135,39 +138,34 @@ ruff check app/ tests/ --fix
 - Password not overwritten when left blank on re-save
 - Test email / Teams endpoints — success and failure paths
 - Non-admin users receive 403 on test endpoints
-- API key displayed, regenerate rotates it
-
 ### `test_routes_teams.py`
 - Team list and create (admin only)
 - Team detail accessible to owner and admin, blocked for others
+- Team deletion (admin only)
 - Add/edit/remove members with permission flags
 - Team notification settings save (alert days, SMTP, Teams webhook)
+- Per-team API key — auto-generated, regenerate rotates it, non-owner denied
 - Certificates visible in team detail view
 - Non-owner access returns redirect with flash message
 
 ### `test_routes_api.py`
 - `GET /api/v1/health` — returns 200 without authentication
-- `GET /api/v1/certs` — requires valid `X-API-Key`, returns paginated list
+- `GET /api/v1/certs` — per-team API key scopes results to team's certificates
 - Filtering by `status`, `tag`, and `search` query parameters
-- `GET /api/v1/certs/<id>` — returns certificate JSON, 404 on missing
-- `POST /api/v1/certs` — creates a certificate, validates required fields
-- `POST /api/v1/certs/bulk` — creates multiple certs, partial-error `207` response
-- `POST /api/v1/certs/fetch` — mocked TLS fetch, saves and returns cert; `save=false` preview
-- `DELETE /api/v1/certs/<id>` — removes cert, returns deleted ID
+- `GET /api/v1/certs/<id>` — returns certificate JSON, 403 if cert belongs to another team
+- `POST /api/v1/certs` — creates a certificate assigned to the API key's team
+- `POST /api/v1/certs/bulk` — creates multiple certs for the team, partial-error `207` response
+- `POST /api/v1/certs/fetch` — mocked TLS fetch, saves cert to the team; `save=false` preview
+- `DELETE /api/v1/certs/<id>` — removes cert, 403 if cert belongs to another team
 - Missing/invalid API key returns `401`
 
 ---
 
-## CI / Scheduled Runs
+## Running Locally
 
-Tests run automatically via GitHub Actions:
+Tests use an in-memory SQLite database — no Docker, server, or external services required.
+Run the full suite with:
 
-| Trigger | When |
-|---|---|
-| Push to `main` / `master` | On every commit |
-| Pull request | Before merge |
-| Scheduled | Every Monday at 08:00 UTC |
-| Manual | Via GitHub Actions → Run workflow |
-
-Test results are uploaded as artifacts for each run and can be downloaded
-from the Actions tab in GitHub.
+```bash
+pytest tests/ -v
+```

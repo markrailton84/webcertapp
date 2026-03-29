@@ -1,5 +1,6 @@
 # CertManager
 
+[![Tests](https://github.com/markrailton84/webcertapp/actions/workflows/test.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/test.yml)
 [![Docker Build](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml)
 [![CodeQL](https://github.com/markrailton84/webcertapp/actions/workflows/codeql.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/codeql.yml)
 
@@ -52,7 +53,7 @@ Copy `.env.example` to `.env` and set the following:
 | `SMTP_FROM` | From address for alert emails | — |
 | `TEAMS_WEBHOOK_URL` | Microsoft Teams Incoming Webhook URL | — |
 
-Email and Teams settings can also be configured in the UI under **Settings**.
+Email and Teams settings can also be configured in the UI under **Settings** (global) or **Teams > Notifications** (per-team).
 
 ---
 
@@ -73,7 +74,7 @@ certmanager/
 │   │   ├── cert_parser.py   # Parse PEM/DER/P7B certificate files
 │   │   ├── cert_fetcher.py  # TLS handshake auto-fetch from hostname
 │   │   ├── notifier.py      # Email + Teams Adaptive Card alerts
-│   │   └── scheduler.py     # Daily 08:00 expiry check background job
+│   │   └── scheduler.py     # Daily 08:00 expiry check (global + per-team)
 │   └── templates/           # Bootstrap 5 Jinja2 templates
 ├── data/                    # SQLite database (Docker volume)
 ├── Dockerfile
@@ -109,10 +110,12 @@ Teams allow groups of users to manage their own set of certificates independentl
 
 | Role | Certificate visibility | Actions |
 |---|---|---|
-| **Admin** | All teams | Full control over everything |
-| **Global user** | All teams (read-only) | View only, no add/edit/delete |
-| **Team owner** | Their team only | Full control of team certs, members, and notifications |
-| **Team member** | Their team only | Determined per-user by the team owner |
+| **Admin** | All certificates, all teams | Full control over everything |
+| **User** (no team) | All certificates (read-only) | View only — no add/edit/delete until assigned to a team |
+| **Team owner** | Their team's certificates | Full control of team certs, members, and notification settings |
+| **Team member** | Their team's certificates | Per-user permissions set by the team owner (view/add/edit/delete) |
+
+Admins create teams and assign owners via **Teams > New Team**. Team owners then add members and set their permissions.
 
 ### Permissions
 
@@ -139,9 +142,9 @@ The REST API allows other teams and tools to query and manage certificates progr
 
 ### Authentication
 
-All API endpoints (except `/api/v1/health`) require an `X-API-Key` header.
+All API endpoints (except `/api/v1/health`) require an `X-API-Key` header. Each team has its own API key, and the key determines which team's certificates the request can access.
 
-Find or regenerate the API key at **Settings > REST API Key** (admin only).
+Find or regenerate a team's API key at **Teams > [Team Name] > Settings** (team owner or admin).
 
 **Bash / Linux / macOS:**
 ```bash
@@ -214,6 +217,8 @@ PowerShell:
       "hostname": "api.example.com",
       "sans": ["DNS:api.example.com"],
       "tags": "prod,api",
+      "team_id": 1,
+      "team_name": "Platform Team",
       ...
     }
   ]
@@ -230,6 +235,10 @@ Content-Type: application/json
 ```
 
 **Required fields:** `common_name`, `not_after`
+
+**Optional:** `not_before`, `issuer`, `subject`, `serial_number`, `thumbprint`, `hostname`, `notes`, `tags`, `sans` (array)
+
+> Certificates are automatically assigned to the team identified by the API key.
 
 **Example:**
 
