@@ -54,11 +54,11 @@
         <thead class="table-light">
           <tr>
             <th>Common Name</th>
+            <th>Team</th>
             <th>Hostname</th>
             <th>Expiry Date</th>
             <th>Days Left</th>
             <th>Status</th>
-            <th>Source</th>
             <th>Tags</th>
             <th></th>
           </tr>
@@ -67,6 +67,11 @@
           {% for cert in certs %}
           <tr>
             <td><a href="{{ url_for('certs.cert_detail', cert_id=cert.id) }}" class="text-decoration-none fw-semibold">{{ cert.common_name }}</a></td>
+            <td>
+              {% if cert.team %}
+                <a href="{{ url_for('teams.team_detail', team_id=cert.team.id) }}" class="badge bg-info text-decoration-none text-dark">{{ cert.team.name }}</a>
+              {% else %}—{% endif %}
+            </td>
             <td>{{ cert.hostname or '—' }}</td>
             <td>{{ cert.not_after.strftime('%Y-%m-%d') }}</td>
             <td class="status-{{ cert.status }}">
@@ -75,7 +80,6 @@
             <td>
               <span class="badge bg-{{ cert.status_badge }}">{{ cert.status.upper() }}</span>
             </td>
-            <td><span class="badge bg-secondary">{{ cert.source }}</span></td>
             <td>
               {% if cert.tags %}
                 {% for tag in cert.tags.split(',') %}

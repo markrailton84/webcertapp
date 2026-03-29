@@ -48,6 +48,7 @@ class Certificate(db.Model):
     notes = db.Column(db.Text)
     tags = db.Column(db.String(512))
     source = db.Column(db.String(20), default="manual")  # manual, upload, fetch
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=True)
     added_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
@@ -150,6 +151,74 @@ class Settings(db.Model):
             db.session.add(settings)
             db.session.commit()
         return settings
+
+
+class Team(db.Model):
+    __tablename__ = "teams"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Per-team alert thresholds
+    _alert_days = db.Column("team_alert_days", db.Text, default="[90, 60, 30, 14, 7]")
+
+    # Per-team email settings
+    email_enabled = db.Column(db.Boolean, default=False)
+    smtp_host = db.Column(db.String(256))
+    smtp_port = db.Column(db.Integer, default=587)
+    smtp_user = db.Column(db.String(256))
+    smtp_password = db.Column(db.String(256))
+    smtp_from = db.Column(db.String(256))
+    smtp_tls = db.Column(db.Boolean, default=True)
+    _email_recipients = db.Column("team_email_recipients", db.Text, default="[]")
+
+    # Per-team Teams webhook
+    teams_enabled = db.Column(db.Boolean, default=False)
+    teams_webhook_url = db.Column(db.Text)
+
+    owner = db.relationship("User", foreign_keys=[owner_id], backref="owned_teams")
+    members = db.relationship("TeamMember", backref="team", lazy=True, cascade="all, delete-orphan")
+    certificates = db.relationship("Certificate", backref="team", lazy=True)
+
+    @property
+    def alert_days(self):
+        return sorted(json.loads(self._alert_days or "[90,60,30,14,7]"), reverse=True)
+
+    @alert_days.setter
+    def alert_days(self, value):
+        self._alert_days = json.dumps(value)
+
+    @property
+    def email_recipients(self):
+        return json.loads(self._email_recipients or "[]")
+
+    @email_recipients.setter
+    def email_recipients(self, value):
+        self._email_recipients = json.dumps(value)
+
+    def get_member(self, user):
+        return TeamMember.query.filter_by(team_id=self.id, user_id=user.id).first()
+
+    def is_owner(self, user):
+        return self.owner_id == user.id
+
+
+class TeamMember(db.Model):
+    __tablename__ = "team_members"
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    can_view = db.Column(db.Boolean, default=True)
+    can_add = db.Column(db.Boolean, default=False)
+    can_edit = db.Column(db.Boolean, default=False)
+    can_delete = db.Column(db.Boolean, default=False)
+    added_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User", backref="team_memberships")
 
 
 class AlertLog(db.Model):

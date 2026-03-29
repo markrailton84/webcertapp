@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{% if team %}Edit Team{% else %}New Team{% endif %} — CertManager{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="{{ url_for('teams.teams_list') }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>Teams</a>
+  <h4 class="mb-0 mt-1"><i class="bi bi-people me-2"></i>{% if team %}Edit Team{% else %}New Team{% endif %}</h4>
+</div>
+
+<div class="card shadow-sm" style="max-width:600px">
+  <div class="card-body">
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label">Team Name <span class="text-danger">*</span></label>
+        <input type="text" name="name" class="form-control" value="{{ team.name if team else '' }}" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" rows="2">{{ team.description if team else '' }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Team Owner <span class="text-danger">*</span></label>
+        <select name="owner_id" class="form-select" required>
+          <option value="">— select user —</option>
+          {% for user in users %}
+          <option value="{{ user.id }}" {% if team and team.owner_id == user.id %}selected{% endif %}>
+            {{ user.username }} ({{ user.email }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save</button>
+        <a href="{{ url_for('teams.teams_list') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

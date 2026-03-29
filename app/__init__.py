@@ -36,11 +36,13 @@ def create_app(test_config=None):
     from .routes.auth import auth_bp
     from .routes.certs import certs_bp
     from .routes.settings import settings_bp
+    from .routes.teams import teams_bp
 
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(certs_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(teams_bp)
 
     with app.app_context():
         db.create_all()
@@ -55,7 +57,8 @@ def _migrate_db():
     """Apply any column additions that db.create_all() won't add to existing tables."""
     from sqlalchemy import inspect, text
     inspector = inspect(db.engine)
-    # Add api_key to settings if it was created before this column existed
+
+    # Add api_key to settings if missing
     settings_cols = {c["name"] for c in inspector.get_columns("settings")}
     if "api_key" not in settings_cols:
         import secrets
@@ -64,6 +67,13 @@ def _migrate_db():
             text(f"ALTER TABLE settings ADD COLUMN api_key VARCHAR(64) DEFAULT '{new_key}'")
         )
         db.session.commit()
+
+    # Add team_id to certificates if missing
+    if inspector.has_table("certificates"):
+        cert_cols = {c["name"] for c in inspector.get_columns("certificates")}
+        if "team_id" not in cert_cols:
+            db.session.execute(text("ALTER TABLE certificates ADD COLUMN team_id INTEGER REFERENCES teams(id)"))
+            db.session.commit()
 
 
 def _ensure_admin():

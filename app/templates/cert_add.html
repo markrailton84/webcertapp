@@ -55,6 +55,17 @@
           <label class="form-label">Notes</label>
           <input type="text" name="notes" class="form-control">
         </div>
+        {% if addable_teams %}
+        <div class="col-12">
+          <label class="form-label">Assign to Team</label>
+          <select name="team_id" class="form-select">
+            <option value="">— no team —</option>
+            {% for team in addable_teams %}
+            <option value="{{ team.id }}">{{ team.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
       </div>
       <div class="mt-4 d-flex gap-2">
         <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Certificate</button>

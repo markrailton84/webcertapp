@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ team.name }} Notifications — CertManager{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="{{ url_for('teams.team_detail', team_id=team.id) }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>{{ team.name }}</a>
+  <h4 class="mb-0 mt-1"><i class="bi bi-gear me-2"></i>{{ team.name }} — Notification Settings</h4>
+</div>
+
+<form method="post">
+  <div class="row g-4">
+
+    <!-- Alert Thresholds -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header"><i class="bi bi-alarm me-2"></i>Alert Thresholds</div>
+        <div class="card-body">
+          <label class="form-label">Days before expiry to alert <small class="text-muted">(comma-separated)</small></label>
+          <input type="text" name="alert_days" class="form-control" style="max-width:300px"
+                 value="{{ team.alert_days | join(', ') }}">
+          <div class="form-text">Example: <code>90, 60, 30, 14, 7</code></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-envelope me-2"></i>Email (SMTP)</span>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" name="email_enabled" id="email_enabled"
+                   {% if team.email_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="email_enabled">Enabled</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">SMTP Host</label>
+              <input type="text" name="smtp_host" class="form-control" value="{{ team.smtp_host or '' }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Port</label>
+              <input type="number" name="smtp_port" class="form-control" value="{{ team.smtp_port or 587 }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Username</label>
+              <input type="text" name="smtp_user" class="form-control" value="{{ team.smtp_user or '' }}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Password <small class="text-muted">(leave blank to keep current)</small></label>
+              <input type="password" name="smtp_password" class="form-control" autocomplete="new-password">
+            </div>
+            <div class="col-12">
+              <label class="form-label">From Address</label>
+              <input type="text" name="smtp_from" class="form-control" value="{{ team.smtp_from or '' }}"
+                     placeholder="CertManager <alerts@example.com>">
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="smtp_tls" id="smtp_tls"
+                       {% if team.smtp_tls %}checked{% endif %}>
+                <label class="form-check-label" for="smtp_tls">Use STARTTLS</label>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Recipients <small class="text-muted">(one per line)</small></label>
+              <textarea name="email_recipients" class="form-control" rows="3">{{ team.email_recipients | join('\n') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Teams -->
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-microsoft-teams me-2"></i>Microsoft Teams</span>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" name="teams_enabled" id="teams_enabled"
+                   {% if team.teams_enabled %}checked{% endif %}>
+            <label class="form-check-label" for="teams_enabled">Enabled</label>
+          </div>
+        </div>
+        <div class="card-body">
+          <label class="form-label">Incoming Webhook URL</label>
+          <input type="url" name="teams_webhook_url" class="form-control"
+                 value="{{ team.teams_webhook_url or '' }}"
+                 placeholder="https://outlook.office.com/webhook/...">
+          <div class="form-text">Create an Incoming Webhook connector in your Teams channel.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="mt-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Settings</button>
+    <a href="{{ url_for('teams.team_detail', team_id=team.id) }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+  </div>
+</form>
+{% endblock %}

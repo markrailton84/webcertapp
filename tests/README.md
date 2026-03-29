@@ -18,7 +18,8 @@ tests/
 ├── test_routes_auth.py          # Login, logout, user management routes
 ├── test_routes_certs.py         # Dashboard, add, edit, delete, upload, fetch routes
 ├── test_routes_settings.py      # Settings save, test email, test Teams routes
-└── test_routes_api.py           # REST API — auth, query, add, bulk, fetch, delete
+├── test_routes_api.py           # REST API — auth, query, add, bulk, fetch, delete
+└── test_routes_teams.py         # Team management, member permissions, notifications
 ```
 
 ---
@@ -135,6 +136,14 @@ ruff check app/ tests/ --fix
 - Test email / Teams endpoints — success and failure paths
 - Non-admin users receive 403 on test endpoints
 - API key displayed, regenerate rotates it
+
+### `test_routes_teams.py`
+- Team list and create (admin only)
+- Team detail accessible to owner and admin, blocked for others
+- Add/edit/remove members with permission flags
+- Team notification settings save (alert days, SMTP, Teams webhook)
+- Certificates visible in team detail view
+- Non-owner access returns redirect with flash message
 
 ### `test_routes_api.py`
 - `GET /api/v1/health` — returns 200 without authentication

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}{{ team.name }} — CertManager{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    {% if current_user.is_admin %}
+    <a href="{{ url_for('teams.teams_list') }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>Teams</a>
+    {% endif %}
+    <h4 class="mb-0 mt-1"><i class="bi bi-people me-2"></i>{{ team.name }}</h4>
+    {% if team.description %}<p class="text-muted mb-0">{{ team.description }}</p>{% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('teams.team_settings', team_id=team.id) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-gear me-1"></i>Notifications
+    </a>
+    <a href="{{ url_for('teams.team_member_add', team_id=team.id) }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-person-plus me-1"></i>Add Member
+    </a>
+  </div>
+</div>
+
+<!-- Members -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header"><i class="bi bi-people me-2"></i>Members</div>
+  <div class="card-body p-0">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th class="text-center">View</th>
+          <th class="text-center">Add</th>
+          <th class="text-center">Edit</th>
+          <th class="text-center">Delete</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Owner row -->
+        <tr class="table-light">
+          <td><strong>{{ team.owner.username }}</strong> <span class="badge bg-primary ms-1">Owner</span></td>
+          <td class="text-muted small">{{ team.owner.email }}</td>
+          <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+          <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+          <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+          <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+          <td></td>
+        </tr>
+        {% for member in team.members %}
+        <tr>
+          <td>{{ member.user.username }}</td>
+          <td class="text-muted small">{{ member.user.email }}</td>
+          <td class="text-center">
+            {% if member.can_view %}<i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if member.can_add %}<i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if member.can_edit %}<i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if member.can_delete %}<i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}<i class="bi bi-x-circle text-muted"></i>{% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{{ url_for('teams.team_member_edit', team_id=team.id, member_id=member.id) }}"
+                 class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{{ url_for('teams.team_member_remove', team_id=team.id, member_id=member.id) }}"
+                    onsubmit="return confirm('Remove {{ member.user.username }} from this team?');">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-person-dash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-3">No members yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Certificates -->
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-shield-lock me-2"></i>Certificates</span>
+    <a href="{{ url_for('certs.cert_add') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle me-1"></i>Add</a>
+  </div>
+  <div class="card-body p-0">
+    {% if team.certificates %}
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Common Name</th>
+          <th>Hostname</th>
+          <th>Expiry</th>
+          <th>Days Left</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cert in team.certificates | sort(attribute='not_after') %}
+        <tr>
+          <td><a href="{{ url_for('certs.cert_detail', cert_id=cert.id) }}" class="fw-semibold text-decoration-none">{{ cert.common_name }}</a></td>
+          <td>{{ cert.hostname or '—' }}</td>
+          <td>{{ cert.not_after.strftime('%Y-%m-%d') }}</td>
+          <td class="status-{{ cert.status }}">
+            {% if cert.days_remaining < 0 %}EXPIRED{% else %}{{ cert.days_remaining }}{% endif %}
+          </td>
+          <td><span class="badge bg-{{ cert.status_badge }}">{{ cert.status.upper() }}</span></td>
+          <td>
+            <a href="{{ url_for('certs.cert_edit', cert_id=cert.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4 text-muted">No certificates assigned to this team yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

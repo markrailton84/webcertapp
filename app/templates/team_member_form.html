@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{% if member %}Edit Member{% else %}Add Member{% endif %} — {{ team.name }}{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <a href="{{ url_for('teams.team_detail', team_id=team.id) }}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left me-1"></i>{{ team.name }}</a>
+  <h4 class="mb-0 mt-1">
+    <i class="bi bi-person-plus me-2"></i>
+    {% if member %}Edit Permissions — {{ member.user.username }}{% else %}Add Member to {{ team.name }}{% endif %}
+  </h4>
+</div>
+
+<div class="card shadow-sm" style="max-width:480px">
+  <div class="card-body">
+    <form method="post">
+      {% if not member %}
+      <div class="mb-4">
+        <label class="form-label">User <span class="text-danger">*</span></label>
+        <select name="user_id" class="form-select" required>
+          <option value="">— select user —</option>
+          {% for user in users %}
+          <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <p class="fw-semibold mb-2">Permissions</p>
+      <div class="row g-2">
+        <div class="col-6">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="can_view" id="can_view"
+                   {% if not member or member.can_view %}checked{% endif %}>
+            <label class="form-check-label" for="can_view"><i class="bi bi-eye me-1"></i>View</label>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="can_add" id="can_add"
+                   {% if member and member.can_add %}checked{% endif %}>
+            <label class="form-check-label" for="can_add"><i class="bi bi-plus-circle me-1"></i>Add</label>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="can_edit" id="can_edit"
+                   {% if member and member.can_edit %}checked{% endif %}>
+            <label class="form-check-label" for="can_edit"><i class="bi bi-pencil me-1"></i>Edit</label>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="can_delete" id="can_delete"
+                   {% if member and member.can_delete %}checked{% endif %}>
+            <label class="form-check-label" for="can_delete"><i class="bi bi-trash me-1"></i>Delete</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save</button>
+        <a href="{{ url_for('teams.team_detail', team_id=team.id) }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

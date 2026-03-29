@@ -27,6 +27,17 @@
         <label class="form-label">Notes</label>
         <textarea name="notes" class="form-control" rows="2"></textarea>
       </div>
+      {% if addable_teams %}
+      <div class="mb-3">
+        <label class="form-label">Assign to Team</label>
+        <select name="team_id" class="form-select">
+          <option value="">— no team —</option>
+          {% for team in addable_teams %}
+          <option value="{{ team.id }}">{{ team.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary"><i class="bi bi-upload me-1"></i>Upload & Import</button>
         <a href="{{ url_for('certs.dashboard') }}" class="btn btn-outline-secondary">Cancel</a>

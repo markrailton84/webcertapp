@@ -57,6 +57,27 @@
             <i class="bi bi-globe"></i> Fetch from Host
           </a>
         </li>
+        {% set owned_teams = current_user.owned_teams if not current_user.is_admin else [] %}
+        {% set member_teams = current_user.team_memberships if not current_user.is_admin else [] %}
+        {% if current_user.is_admin or owned_teams %}
+        <hr class="border-secondary my-2">
+        {% if current_user.is_admin %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint and request.endpoint.startswith('teams.') %}active{% endif %}" href="{{ url_for('teams.teams_list') }}">
+            <i class="bi bi-people"></i> Teams
+          </a>
+        </li>
+        {% else %}
+        {% for team in owned_teams %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.endpoint == 'teams.team_detail' and request.view_args.get('team_id') == team.id %}active{% endif %}"
+             href="{{ url_for('teams.team_detail', team_id=team.id) }}">
+            <i class="bi bi-people"></i> {{ team.name }}
+          </a>
+        </li>
+        {% endfor %}
+        {% endif %}
+        {% endif %}
         {% if current_user.is_admin %}
         <hr class="border-secondary my-2">
         <li class="nav-item">
@@ -66,7 +87,7 @@
         </li>
         <li class="nav-item">
           <a class="nav-link {% if request.endpoint == 'auth.users' %}active{% endif %}" href="{{ url_for('auth.users') }}">
-            <i class="bi bi-people"></i> Users
+            <i class="bi bi-person-gear"></i> Users
           </a>
         </li>
         {% endif %}

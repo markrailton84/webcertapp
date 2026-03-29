@@ -3,17 +3,86 @@ from datetime import datetime, timezone
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from ..models import Certificate, db
+from ..models import Certificate, Team, TeamMember, db
 from ..services.cert_fetcher import fetch_cert_from_host
 from ..services.cert_parser import parse_cert_file
 
 certs_bp = Blueprint("certs", __name__)
 
 
+# ---------------------------------------------------------------------------
+# Permission helpers
+# ---------------------------------------------------------------------------
+
+def _user_teams_with_perm(perm):
+    """Return teams where current_user has a given permission (or is owner/admin)."""
+    if current_user.is_admin:
+        return Team.query.all()
+    owned = Team.query.filter_by(owner_id=current_user.id).all()
+    memberships = TeamMember.query.filter_by(user_id=current_user.id).all()
+    member_teams = [
+        m.team for m in memberships if getattr(m, perm, False)
+    ]
+    seen = {t.id for t in owned}
+    result = list(owned)
+    for t in member_teams:
+        if t.id not in seen:
+            result.append(t)
+            seen.add(t.id)
+    return result
+
+
+def _can_act_on_cert(cert, perm):
+    """Check if current_user has a permission on a specific cert's team."""
+    if current_user.is_admin:
+        return True
+    if cert.team_id is None:
+        # Unowned certs: only admins and the original adder can modify
+        return cert.added_by_id == current_user.id
+    team = cert.team
+    if team.is_owner(current_user):
+        return True
+    member = team.get_member(current_user)
+    return member is not None and getattr(member, perm, False)
+
+
+def _visible_certs():
+    """Return certs visible to the current user."""
+    if current_user.is_admin:
+        return Certificate.query.order_by(Certificate.not_after.asc()).all()
+
+    # Global users (role='user') see all certs
+    if current_user.role == "user":
+        # Check if they have any team ownership or membership
+        owned = Team.query.filter_by(owner_id=current_user.id).count()
+        memberships = TeamMember.query.filter_by(user_id=current_user.id).count()
+        if owned == 0 and memberships == 0:
+            return Certificate.query.order_by(Certificate.not_after.asc()).all()
+
+    # Team owners/members: see certs from their teams + any unowned certs they added
+    team_ids = set()
+    for t in Team.query.filter_by(owner_id=current_user.id).all():
+        team_ids.add(t.id)
+    for m in TeamMember.query.filter_by(user_id=current_user.id).all():
+        if m.can_view:
+            team_ids.add(m.team_id)
+
+    return Certificate.query.filter(
+        db.or_(
+            Certificate.team_id.in_(team_ids),
+            db.and_(Certificate.team_id.is_(None), Certificate.added_by_id == current_user.id),
+        )
+    ).order_by(Certificate.not_after.asc()).all()
+
+
+# ---------------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------------
+
 @certs_bp.route("/")
 @login_required
 def dashboard():
-    certs = Certificate.query.order_by(Certificate.not_after.asc()).all()
+    certs = _visible_certs()
     stats = {
         "total": len(certs),
         "expired": sum(1 for c in certs if c.status == "expired"),
@@ -24,16 +93,28 @@ def dashboard():
     return render_template("dashboard.html", certs=certs, stats=stats)
 
 
+# ---------------------------------------------------------------------------
+# Cert detail
+# ---------------------------------------------------------------------------
+
 @certs_bp.route("/certs/<int:cert_id>")
 @login_required
 def cert_detail(cert_id):
     cert = Certificate.query.get_or_404(cert_id)
-    return render_template("cert_detail.html", cert=cert)
+    can_edit = _can_act_on_cert(cert, "can_edit")
+    can_delete = _can_act_on_cert(cert, "can_delete")
+    return render_template("cert_detail.html", cert=cert, can_edit=can_edit, can_delete=can_delete)
 
+
+# ---------------------------------------------------------------------------
+# Add cert
+# ---------------------------------------------------------------------------
 
 @certs_bp.route("/certs/add", methods=["GET", "POST"])
 @login_required
 def cert_add():
+    addable_teams = _user_teams_with_perm("can_add")
+
     if request.method == "POST":
         try:
             not_after = datetime.strptime(request.form["not_after"], "%Y-%m-%d").replace(
@@ -49,6 +130,8 @@ def cert_add():
             sans_raw = request.form.get("sans", "").strip()
             sans_list = [s.strip() for s in sans_raw.splitlines() if s.strip()]
 
+            team_id = request.form.get("team_id", type=int) or None
+
             cert = Certificate(
                 common_name=request.form["common_name"].strip(),
                 issuer=request.form.get("issuer", "").strip(),
@@ -61,6 +144,7 @@ def cert_add():
                 notes=request.form.get("notes", "").strip(),
                 tags=request.form.get("tags", "").strip(),
                 source="manual",
+                team_id=team_id,
                 added_by_id=current_user.id,
             )
             cert.sans = sans_list
@@ -71,21 +155,28 @@ def cert_add():
         except Exception as e:
             flash(f"Error adding certificate: {e}", "danger")
 
-    return render_template("cert_add.html")
+    return render_template("cert_add.html", addable_teams=addable_teams)
 
+
+# ---------------------------------------------------------------------------
+# Upload cert
+# ---------------------------------------------------------------------------
 
 @certs_bp.route("/certs/upload", methods=["GET", "POST"])
 @login_required
 def cert_upload():
+    addable_teams = _user_teams_with_perm("can_add")
+
     if request.method == "POST":
         file = request.files.get("cert_file")
         if not file or not file.filename:
             flash("No file selected.", "danger")
-            return render_template("cert_upload.html")
+            return render_template("cert_upload.html", addable_teams=addable_teams)
 
         hostname = request.form.get("hostname", "").strip()
         notes = request.form.get("notes", "").strip()
         tags = request.form.get("tags", "").strip()
+        team_id = request.form.get("team_id", type=int) or None
 
         try:
             cert_data = parse_cert_file(file)
@@ -101,6 +192,7 @@ def cert_upload():
                 notes=notes,
                 tags=tags,
                 source="upload",
+                team_id=team_id,
                 added_by_id=current_user.id,
             )
             cert.sans = cert_data.get("sans", [])
@@ -111,20 +203,26 @@ def cert_upload():
         except Exception as e:
             flash(f"Error parsing certificate: {e}", "danger")
 
-    return render_template("cert_upload.html")
+    return render_template("cert_upload.html", addable_teams=addable_teams)
 
+
+# ---------------------------------------------------------------------------
+# Fetch cert
+# ---------------------------------------------------------------------------
 
 @certs_bp.route("/certs/fetch", methods=["GET", "POST"])
 @login_required
 def cert_fetch():
+    addable_teams = _user_teams_with_perm("can_add")
     fetched = None
+
     if request.method == "POST":
         hostname = request.form.get("hostname", "").strip()
         port = int(request.form.get("port", 443) or 443)
 
         if not hostname:
             flash("Please enter a hostname.", "danger")
-            return render_template("cert_fetch.html")
+            return render_template("cert_fetch.html", fetched=None, addable_teams=addable_teams)
 
         try:
             cert_data = fetch_cert_from_host(hostname, port)
@@ -135,6 +233,7 @@ def cert_fetch():
             if request.form.get("save"):
                 notes = request.form.get("notes", "").strip()
                 tags = request.form.get("tags", "").strip()
+                team_id = request.form.get("team_id", type=int) or None
                 cert = Certificate(
                     common_name=cert_data["common_name"],
                     issuer=cert_data.get("issuer", ""),
@@ -147,6 +246,7 @@ def cert_fetch():
                     notes=notes,
                     tags=tags,
                     source="fetch",
+                    team_id=team_id,
                     added_by_id=current_user.id,
                 )
                 cert.sans = cert_data.get("sans", [])
@@ -157,13 +257,21 @@ def cert_fetch():
         except Exception as e:
             flash(f"Error fetching certificate from '{hostname}': {e}", "danger")
 
-    return render_template("cert_fetch.html", fetched=fetched)
+    return render_template("cert_fetch.html", fetched=fetched, addable_teams=addable_teams)
 
+
+# ---------------------------------------------------------------------------
+# Edit cert
+# ---------------------------------------------------------------------------
 
 @certs_bp.route("/certs/<int:cert_id>/edit", methods=["GET", "POST"])
 @login_required
 def cert_edit(cert_id):
     cert = Certificate.query.get_or_404(cert_id)
+
+    if not _can_act_on_cert(cert, "can_edit"):
+        flash("You do not have permission to edit this certificate.", "danger")
+        return redirect(url_for("certs.cert_detail", cert_id=cert_id))
 
     if request.method == "POST":
         try:
@@ -189,8 +297,6 @@ def cert_edit(cert_id):
 
             sans_raw = request.form.get("sans", "").strip()
             cert.sans = [s.strip() for s in sans_raw.splitlines() if s.strip()]
-
-            # Reset alert sent days so re-alerts can fire if thresholds are crossed again
             cert.alert_sent_days = []
 
             db.session.commit()
@@ -202,10 +308,19 @@ def cert_edit(cert_id):
     return render_template("cert_edit.html", cert=cert)
 
 
+# ---------------------------------------------------------------------------
+# Delete cert
+# ---------------------------------------------------------------------------
+
 @certs_bp.route("/certs/<int:cert_id>/delete", methods=["POST"])
 @login_required
 def cert_delete(cert_id):
     cert = Certificate.query.get_or_404(cert_id)
+
+    if not _can_act_on_cert(cert, "can_delete"):
+        flash("You do not have permission to delete this certificate.", "danger")
+        return redirect(url_for("certs.cert_detail", cert_id=cert_id))
+
     name = cert.common_name
     db.session.delete(cert)
     db.session.commit()

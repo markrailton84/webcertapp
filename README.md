@@ -10,9 +10,11 @@ A team certificate management web app built with Python/Flask. Track TLS/SSL cer
 - **Dashboard** — view all certificates with expiry status (OK, Warning, Critical, Expired)
 - **3 ways to add certificates** — manual entry, file upload, or auto-fetch from a hostname
 - **Supported file formats** — `.pem`, `.crt`, `.cer`, `.der`, `.p7b`
-- **Notifications** — Email (SMTP) and Microsoft Teams (Adaptive Cards) alerts
-- **Configurable thresholds** — alert at 90, 60, 30, 14, 7 days (or any custom values)
-- **Multi-user** — admin and user roles, managed via the UI
+- **Teams** — group certificates by team, each team manages its own members and certificates
+- **Per-team permissions** — team owners grant members view, add, edit, and delete access independently
+- **Per-team notifications** — each team has its own Email (SMTP) and Teams webhook alert config
+- **Configurable thresholds** — alert at 90, 60, 30, 14, 7 days (or any custom values), per team
+- **Multi-user** — admin, global user, team owner, and team member roles
 - **REST API** — query, add, bulk-import, and fetch certificates programmatically
 - **Docker** — runs as a single container with persistent SQLite storage
 
@@ -60,12 +62,13 @@ Email and Teams settings can also be configured in the UI under **Settings**.
 certmanager/
 ├── app/
 │   ├── __init__.py          # Flask app factory, auto-creates admin user
-│   ├── models.py            # Certificate, User, Settings, AlertLog models
+│   ├── models.py            # Certificate, User, Team, TeamMember, Settings, AlertLog
 │   ├── routes/
 │   │   ├── api.py           # REST API — /api/v1/*
 │   │   ├── auth.py          # Login, logout, user management
 │   │   ├── certs.py         # Dashboard, add/edit/delete, upload, fetch
-│   │   └── settings.py      # SMTP + Teams config, test buttons, API key
+│   │   ├── settings.py      # Global SMTP + Teams config, API key
+│   │   └── teams.py         # Team management, members, per-team notifications
 │   ├── services/
 │   │   ├── cert_parser.py   # Parse PEM/DER/P7B certificate files
 │   │   ├── cert_fetcher.py  # TLS handshake auto-fetch from hostname
@@ -85,13 +88,48 @@ certmanager/
 
 | Route | Description |
 |---|---|
-| `/` | Dashboard — certificate list with status badges |
-| `/certs/add` | Manual certificate entry form |
-| `/certs/upload` | Upload a certificate file |
-| `/certs/fetch` | Auto-fetch certificate from a hostname via TLS |
+| `/` | Dashboard — certificate list with status badges and team column |
+| `/certs/add` | Manual certificate entry form (with team selector) |
+| `/certs/upload` | Upload a certificate file (with team selector) |
+| `/certs/fetch` | Auto-fetch certificate from a hostname via TLS (with team selector) |
 | `/certs/<id>` | Certificate detail view with alert history |
-| `/settings` | Notification, threshold, and API key configuration (admin) |
+| `/teams` | Team list — create and manage teams (admin) |
+| `/teams/<id>` | Team detail — members, permissions, certificates (owner/admin) |
+| `/teams/<id>/settings` | Per-team notification configuration (owner/admin) |
+| `/settings` | Global notification, threshold, and API key configuration (admin) |
 | `/users` | User management (admin) |
+
+---
+
+## Teams
+
+Teams allow groups of users to manage their own set of certificates independently.
+
+### Roles and access
+
+| Role | Certificate visibility | Actions |
+|---|---|---|
+| **Admin** | All teams | Full control over everything |
+| **Global user** | All teams (read-only) | View only, no add/edit/delete |
+| **Team owner** | Their team only | Full control of team certs, members, and notifications |
+| **Team member** | Their team only | Determined per-user by the team owner |
+
+### Permissions
+
+Team owners set the following per-member permissions:
+
+| Permission | Description |
+|---|---|
+| **View** | Can see the team's certificates on the dashboard |
+| **Add** | Can add/upload/fetch certificates into the team |
+| **Edit** | Can edit existing team certificates |
+| **Delete** | Can delete team certificates |
+
+### Notifications
+
+Each team has its own notification configuration (Email SMTP and Microsoft Teams webhook) and its own alert threshold schedule. These are set by the team owner under **Team > Notifications**.
+
+Global notifications (Settings page) apply to certificates that are not assigned to any team.
 
 ---
 
