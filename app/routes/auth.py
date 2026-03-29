@@ -1,7 +1,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
-from ..models import User, db
+from ..models import Team, TeamMember, User, db
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -41,7 +41,18 @@ def users():
         flash("Admin access required.", "danger")
         return redirect(url_for("certs.dashboard"))
     all_users = User.query.order_by(User.created_at.desc()).all()
-    return render_template("users.html", users=all_users)
+
+    # Build a map of user_id -> list of (team, membership) for display
+    memberships = TeamMember.query.all()
+    owned_teams = Team.query.all()
+
+    user_teams = {}
+    for team in owned_teams:
+        user_teams.setdefault(team.owner_id, []).append({"team": team, "role": "owner"})
+    for m in memberships:
+        user_teams.setdefault(m.user_id, []).append({"team": m.team, "role": "member", "member": m})
+
+    return render_template("users.html", users=all_users, user_teams=user_teams)
 
 
 @auth_bp.route("/users/add", methods=["GET", "POST"])

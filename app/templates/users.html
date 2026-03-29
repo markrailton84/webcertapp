@@ -3,7 +3,7 @@
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="mb-0"><i class="bi bi-people me-2"></i>Users</h4>
+  <h4 class="mb-0"><i class="bi bi-person-gear me-2"></i>Users</h4>
   <a href="{{ url_for('auth.add_user') }}" class="btn btn-sm btn-primary"><i class="bi bi-person-plus me-1"></i>Add User</a>
 </div>
 
@@ -15,6 +15,7 @@
           <th>Username</th>
           <th>Email</th>
           <th>Role</th>
+          <th>Teams</th>
           <th>Created</th>
           <th></th>
         </tr>
@@ -25,6 +26,27 @@
           <td>{{ user.username }}</td>
           <td>{{ user.email }}</td>
           <td><span class="badge bg-{{ 'primary' if user.is_admin else 'secondary' }}">{{ user.role }}</span></td>
+          <td>
+            {% set memberships = user_teams.get(user.id, []) %}
+            {% if memberships %}
+              {% for entry in memberships %}
+                <a href="{{ url_for('teams.team_detail', team_id=entry.team.id) }}"
+                   class="badge text-decoration-none me-1 {% if entry.role == 'owner' %}bg-primary{% else %}bg-info text-dark{% endif %}">
+                  {{ entry.team.name }}
+                  {% if entry.role == 'owner' %}
+                    <i class="bi bi-star-fill ms-1" title="Owner"></i>
+                  {% else %}
+                    {% set m = entry.member %}
+                    <small class="ms-1 opacity-75">
+                      {% if m.can_view %}V{% endif %}{% if m.can_add %}A{% endif %}{% if m.can_edit %}E{% endif %}{% if m.can_delete %}D{% endif %}
+                    </small>
+                  {% endif %}
+                </a>
+              {% endfor %}
+            {% else %}
+              <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
           <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
           <td>
             {% if user.id != current_user.id %}
@@ -39,5 +61,10 @@
       </tbody>
     </table>
   </div>
+</div>
+
+<div class="mt-2 text-muted small">
+  Team badges: <span class="badge bg-primary">owner ★</span>
+  <span class="badge bg-info text-dark">member</span> — permission letters: V=View A=Add E=Edit D=Delete
 </div>
 {% endblock %}
