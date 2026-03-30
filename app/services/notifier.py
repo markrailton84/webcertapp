@@ -25,7 +25,7 @@ def send_expiry_email(settings, cert) -> None:
 
     days = cert.days_remaining
     cn = _sanitize_header(cert.common_name)
-    subject = f"[CertManager] Certificate expiry alert: {cn} ({_days_label(days)})"
+    subject = f"[My Cert Manager] Certificate expiry alert: {cn} ({_days_label(days)})"
 
     body_html = f"""
     <h2>Certificate Expiry Alert</h2>
@@ -56,10 +56,10 @@ def send_test_email(settings) -> None:
         raise ValueError("No email recipients configured.")
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "[CertManager] Test Email"
+    msg["Subject"] = "[My Cert Manager] Test Email"
     msg["From"] = settings.smtp_from or settings.smtp_user
     msg["To"] = ", ".join(settings.email_recipients)
-    msg.attach(MIMEText("<h2>CertManager test email — it works!</h2>", "html"))
+    msg.attach(MIMEText("<h2>My Cert Manager test email — it works!</h2>", "html"))
     _smtp_send(settings, msg)
 
 
@@ -148,7 +148,7 @@ def send_test_teams(settings) -> None:
                             "type": "TextBlock",
                             "size": "Large",
                             "weight": "Bolder",
-                            "text": "CertManager Test Message — it works!",
+                            "text": "My Cert Manager Test Message — it works!",
                             "color": "good",
                         }
                     ],

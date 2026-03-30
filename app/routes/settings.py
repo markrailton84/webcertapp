@@ -83,3 +83,15 @@ def test_teams():
     return redirect(url_for("settings.settings"))
 
 
+@settings_bp.route("/settings/regenerate-api-key", methods=["POST"])
+@login_required
+def regenerate_api_key():
+    if not current_user.is_admin:
+        return {"error": "Forbidden"}, 403
+
+    s = Settings.get()
+    s.regenerate_api_key()
+    db.session.commit()
+    flash("Global API key regenerated.", "success")
+    return redirect(url_for("settings.settings"))
+

@@ -31,6 +31,20 @@ class User(UserMixin, db.Model):
     def is_admin(self):
         return self.role == "admin"
 
+    @property
+    def is_global_admin(self):
+        return self.role == "global_admin"
+
+    @property
+    def can_see_all(self):
+        """True for roles that have visibility across all teams."""
+        return self.role in ("admin", "global_admin")
+
+    @property
+    def is_manager(self):
+        """True for roles that can manage teams, users, and invites."""
+        return self.role in ("admin", "global_admin")
+
 
 class Certificate(db.Model):
     __tablename__ = "certificates"
@@ -140,6 +154,9 @@ class Settings(db.Model):
     def email_recipients(self, value):
         self._email_recipients = json.dumps(value)
 
+    def regenerate_api_key(self):
+        self.api_key = secrets.token_hex(32)
+
     @classmethod
     def get(cls):
         settings = cls.query.first()
@@ -234,3 +251,46 @@ class AlertLog(db.Model):
     sent_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     certificate = db.relationship("Certificate", backref="alert_logs")
+
+
+class Invite(db.Model):
+    __tablename__ = "invites"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=False,
+                      default=lambda: secrets.token_urlsafe(32))
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
+    can_view = db.Column(db.Boolean, default=True)
+    can_add = db.Column(db.Boolean, default=False)
+    can_edit = db.Column(db.Boolean, default=False)
+    can_delete = db.Column(db.Boolean, default=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+
+    team = db.relationship("Team", backref="invites")
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+
+    @property
+    def is_expired(self):
+        now = datetime.now(timezone.utc)
+        exp = self.expires_at if self.expires_at.tzinfo else self.expires_at.replace(tzinfo=timezone.utc)
+        return now > exp
+
+    @property
+    def is_used(self):
+        return self.used_at is not None
+
+    @property
+    def status(self):
+        if self.is_used:
+            return "used"
+        if self.is_expired:
+            return "expired"
+        return "pending"
+
+    @property
+    def is_valid(self):
+        return not self.is_used and not self.is_expired

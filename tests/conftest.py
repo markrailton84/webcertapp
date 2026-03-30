@@ -3,10 +3,12 @@ Shared pytest fixtures for webcertapp tests.
 
 Provides:
   - app / client / db  — in-memory Flask test environment
-  - admin_user / regular_user — pre-created user records
-  - auth_client / user_client — logged-in test clients
+  - admin_user / regular_user / global_admin_user — pre-created user records
+  - auth_client / user_client / global_admin_client — logged-in test clients
   - sample_cert — a Certificate row in the DB
   - sample_pem_bytes — a self-signed PEM cert generated at test time
+  - team / team_member_user / team_membership / team_cert — team fixtures
+  - pending_invite — a valid pending Invite for use in invite tests
 """
 
 import datetime
@@ -19,7 +21,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 from app import create_app
-from app.models import Certificate, Team, TeamMember, User, db as _db
+from app.models import Certificate, Invite, Team, TeamMember, User, db as _db
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +120,22 @@ def regular_user(db):
     db.session.add(user)
     db.session.commit()
     return user
+
+
+@pytest.fixture(scope="function")
+def global_admin_user(db):
+    user = User(username="globaladmin", email="globaladmin@test.com", role="global_admin")
+    user.set_password("globalpass")
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
+@pytest.fixture(scope="function")
+def global_admin_client(client, global_admin_user):
+    """Test client logged in as a global admin."""
+    client.post("/login", data={"username": "globaladmin", "password": "globalpass"})
+    return client
 
 
 @pytest.fixture(scope="function")
@@ -255,6 +273,24 @@ def team_membership(db, team, team_member_user):
     db.session.add(m)
     db.session.commit()
     return m
+
+
+@pytest.fixture(scope="function")
+def pending_invite(db, team, admin_user):
+    """A valid pending invite for team membership."""
+    invite = Invite(
+        email="newuser@test.com",
+        team_id=team.id,
+        can_view=True,
+        can_add=True,
+        can_edit=False,
+        can_delete=False,
+        created_by_id=admin_user.id,
+        expires_at=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=48),
+    )
+    db.session.add(invite)
+    db.session.commit()
+    return invite
 
 
 @pytest.fixture(scope="function")

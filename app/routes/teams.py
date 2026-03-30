@@ -7,8 +7,8 @@ teams_bp = Blueprint("teams", __name__)
 
 
 def _require_team_owner(team):
-    """Return a redirect if the current user is not admin or team owner, else None."""
-    if current_user.is_admin or team.is_owner(current_user):
+    """Return a redirect if the current user is not a manager or team owner, else None."""
+    if current_user.is_manager or team.is_owner(current_user):
         return None
     flash("Team owner access required.", "danger")
     return redirect(url_for("certs.dashboard"))
@@ -21,7 +21,7 @@ def _require_team_owner(team):
 @teams_bp.route("/teams")
 @login_required
 def teams_list():
-    if not current_user.is_admin:
+    if not current_user.is_manager:
         flash("Admin access required.", "danger")
         return redirect(url_for("certs.dashboard"))
     teams = Team.query.order_by(Team.name).all()
@@ -31,7 +31,7 @@ def teams_list():
 @teams_bp.route("/teams/new", methods=["GET", "POST"])
 @login_required
 def team_new():
-    if not current_user.is_admin:
+    if not current_user.is_manager:
         flash("Admin access required.", "danger")
         return redirect(url_for("certs.dashboard"))
 
@@ -67,7 +67,7 @@ def team_new():
 @teams_bp.route("/teams/<int:team_id>/delete", methods=["POST"])
 @login_required
 def team_delete(team_id):
-    if not current_user.is_admin:
+    if not current_user.is_manager:
         flash("Admin access required.", "danger")
         return redirect(url_for("certs.dashboard"))
 

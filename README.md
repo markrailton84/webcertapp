@@ -1,4 +1,4 @@
-# CertManager
+# My Cert Manager
 
 [![Tests](https://github.com/markrailton84/webcertapp/actions/workflows/test.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/test.yml)
 [![Docker Build](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml/badge.svg)](https://github.com/markrailton84/webcertapp/actions/workflows/docker-build.yml)
@@ -6,16 +6,20 @@
 
 A team certificate management web app built with Python/Flask. Track TLS/SSL certificates across your systems, get notified before they expire via Email and Microsoft Teams, and integrate programmatically via the REST API.
 
+Users are invited to join teams via one-time invite links — no SMTP required for onboarding.
+
 ## Features
 
-- **Dashboard** — view all certificates with expiry status (OK, Warning, Critical, Expired)
-- **3 ways to add certificates** — manual entry, file upload, or auto-fetch from a hostname
+- **Dashboard** — each user sees only their team's certificates with expiry status (OK, Warning, Critical, Expired)
+- **3 ways to add certificates** — manual entry, file upload, or auto-fetch from a hostname; always scoped to a team
 - **Supported file formats** — `.pem`, `.crt`, `.cer`, `.der`, `.p7b`
-- **Teams** — group certificates by team, each team manages its own members and certificates
+- **Invite-based onboarding** — managers generate one-time invite links and share them out-of-band (Slack, Teams, email); no SMTP required for user registration
+- **Teams** — every user belongs to a team; certificates are always assigned to a team
 - **Per-team permissions** — team owners grant members view, add, edit, and delete access independently
 - **Per-team notifications** — each team has its own Email (SMTP) and Teams webhook alert config
+- **Per-team API keys** — each team's API key scopes all API operations to that team's certificates only
 - **Configurable thresholds** — alert at 90, 60, 30, 14, 7 days (or any custom values), per team
-- **Multi-user** — admin, global user, team owner, and team member roles
+- **Multi-user** — admin, global admin, team owner, and team member roles
 - **REST API** — query, add, bulk-import, and fetch certificates programmatically
 - **Docker** — runs as a single container with persistent SQLite storage
 
@@ -25,7 +29,7 @@ A team certificate management web app built with Python/Flask. Track TLS/SSL cer
 
 ```bash
 git clone <repo-url>
-cd certmanager
+cd webcertapp
 cp .env.example .env   # edit with your settings
 docker compose up -d
 ```
@@ -60,14 +64,15 @@ Email and Teams settings can also be configured in the UI under **Settings** (gl
 ## Project Structure
 
 ```
-certmanager/
+webcertapp/
 ├── app/
 │   ├── __init__.py          # Flask app factory, auto-creates admin user
-│   ├── models.py            # Certificate, User, Team, TeamMember, Settings, AlertLog
+│   ├── models.py            # Certificate, User, Team, TeamMember, Settings, AlertLog, Invite
 │   ├── routes/
 │   │   ├── api.py           # REST API — /api/v1/*
 │   │   ├── auth.py          # Login, logout, user management
 │   │   ├── certs.py         # Dashboard, add/edit/delete, upload, fetch
+│   │   ├── invites.py       # Invite management + public accept flow
 │   │   ├── settings.py      # Global SMTP + Teams config, API key
 │   │   └── teams.py         # Team management, members, per-team notifications
 │   ├── services/
@@ -77,6 +82,7 @@ certmanager/
 │   │   └── scheduler.py     # Daily 08:00 expiry check (global + per-team)
 │   └── templates/           # Bootstrap 5 Jinja2 templates
 ├── data/                    # SQLite database (Docker volume)
+├── tests/                   # pytest test suite
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -89,33 +95,51 @@ certmanager/
 
 | Route | Description |
 |---|---|
-| `/` | Dashboard — certificate list with status badges and team column |
-| `/certs/add` | Manual certificate entry form (with team selector) |
-| `/certs/upload` | Upload a certificate file (with team selector) |
-| `/certs/fetch` | Auto-fetch certificate from a hostname via TLS (with team selector) |
+| `/` | Dashboard — shows only the current user's team certificates |
+| `/certs/add` | Manual certificate entry — auto-assigned to user's team |
+| `/certs/upload` | Upload a certificate file — auto-assigned to user's team |
+| `/certs/fetch` | Auto-fetch certificate from a hostname — auto-assigned to user's team |
 | `/certs/<id>` | Certificate detail view with alert history |
-| `/teams` | Team list — create and manage teams (admin) |
+| `/invites` | Invite list — create and manage invites (admin/global admin) |
+| `/invites/create` | Generate a one-time invite link for a new user |
+| `/invite/<token>` | Public invite accept page — set display name + password |
+| `/teams` | Team list — create and manage teams (admin/global admin) |
 | `/teams/<id>` | Team detail — members, permissions, certificates (owner/admin) |
-| `/teams/<id>/settings` | Per-team notification configuration (owner/admin) |
-| `/settings` | Global notification, threshold, and API key configuration (admin) |
-| `/users` | User management (admin) |
+| `/teams/<id>/settings` | Per-team notification config and API key (owner/admin) |
+| `/settings` | Global notification and threshold configuration (admin) |
+| `/users` | User management — create users with mandatory team assignment (admin/global admin) |
 
 ---
 
 ## Teams
 
-Teams allow groups of users to manage their own set of certificates independently.
+Teams are the core organisational unit. Every user must belong to a team — certificates are always assigned to a team, and users only see their own team's certificates on the dashboard.
 
 ### Roles and access
 
 | Role | Certificate visibility | Actions |
 |---|---|---|
-| **Admin** | All certificates, all teams | Full control over everything |
-| **User** (no team) | All certificates (read-only) | View only — no add/edit/delete until assigned to a team |
-| **Team owner** | Their team's certificates | Full control of team certs, members, and notification settings |
-| **Team member** | Their team's certificates | Per-user permissions set by the team owner (view/add/edit/delete) |
+| **Admin** | All certificates, all teams | Full control — teams, users, invites, settings, certs |
+| **Global Admin** | All certificates, all teams | Manage teams, users, invites — read-only for certificates |
+| **Team owner** | Their team's certificates only | Full control of team certs, members, and notification settings |
+| **Team member** | Their team's certificates only | Per-user permissions set by the team owner (view/add/edit/delete) |
 
-Admins create teams and assign owners via **Teams > New Team**. Team owners then add members and set their permissions.
+> Global Admin and Admin can create teams, manage users, and generate invite links. When creating a user directly (**Users > Add User**), a team must be selected for the `user` role. Global Admin and Admin roles do not require a team.
+
+### Inviting users
+
+The recommended way to add a user is via an invite link:
+
+1. Go to **Invites > Create Invite**
+2. Enter the new user's email, select their team, and set their permissions
+3. Copy the generated link and share it via Slack, Teams, or email
+4. The recipient opens the link, sets a display name and password, and is automatically logged in and added to the team
+
+Invite links expire after **48 hours** and can only be used once.
+
+### Creating users directly
+
+When adding a user directly (**Users > Add User**), a team and permissions must be selected for the `user` role. The user is immediately added as a member of that team. Permissions can be adjusted later by the team owner under **Team > Members**.
 
 ### Permissions
 
@@ -130,9 +154,9 @@ Team owners set the following per-member permissions:
 
 ### Notifications
 
-Each team has its own notification configuration (Email SMTP and Microsoft Teams webhook) and its own alert threshold schedule. These are set by the team owner under **Team > Notifications**.
+Each team has its own notification configuration (Email SMTP and Microsoft Teams webhook) and its own alert threshold schedule. These are set by the team owner under **Team > Settings**.
 
-Global notifications (Settings page) apply to certificates that are not assigned to any team.
+Global notifications (Settings page) apply as a fallback for any certificates not assigned to a team (typically only created by admins).
 
 ---
 
@@ -142,9 +166,12 @@ The REST API allows other teams and tools to query and manage certificates progr
 
 ### Authentication
 
-All API endpoints (except `/api/v1/health`) require an `X-API-Key` header. Each team has its own API key, and the key determines which team's certificates the request can access.
+All API endpoints (except `/api/v1/health`) require an `X-API-Key` header. There are two key types:
 
-Find or regenerate a team's API key at **Teams > [Team Name] > Settings** (team owner or admin).
+| Key type | Scope | Location |
+|---|---|---|
+| **Global key** | All teams — full read/write; write operations require `team_id` in the body | Settings page (admin) |
+| **Team key** | That team's certificates only | Teams > [Team Name] > Settings (owner/admin) |
 
 **Bash / Linux / macOS:**
 ```bash
@@ -238,7 +265,8 @@ Content-Type: application/json
 
 **Optional:** `not_before`, `issuer`, `subject`, `serial_number`, `thumbprint`, `hostname`, `notes`, `tags`, `sans` (array)
 
-> Certificates are automatically assigned to the team identified by the API key.
+> **Team key:** certificate is automatically assigned to that team.
+> **Global key:** `team_id` (integer) is required in the body.
 
 **Example:**
 

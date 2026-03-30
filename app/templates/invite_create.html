@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Create Invite — My Cert Manager{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="d-flex align-items-center mb-4">
+      <a href="{{ url_for('invites.invite_list') }}" class="btn btn-sm btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <h2 class="mb-0"><i class="bi bi-envelope-plus me-2"></i>Create Invite</h2>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <p class="text-muted mb-4">
+          Generate a one-time invite link. Share it with the recipient via Slack, Teams, or email.
+          The link expires in 48 hours and can only be used once.
+        </p>
+
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control" placeholder="colleague@example.com" required autofocus>
+            <div class="form-text">The account will be registered to this email address.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Team <span class="text-danger">*</span></label>
+            <select name="team_id" class="form-select" required>
+              <option value="">— Select a team —</option>
+              {% for team in teams %}
+              <option value="{{ team.id }}">{{ team.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Permissions</label>
+            <div class="d-flex flex-wrap gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="can_view" id="can_view" checked>
+                <label class="form-check-label" for="can_view">View</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="can_add" id="can_add">
+                <label class="form-check-label" for="can_add">Add</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="can_edit" id="can_edit">
+                <label class="form-check-label" for="can_edit">Edit</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="can_delete" id="can_delete">
+                <label class="form-check-label" for="can_delete">Delete</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-envelope-plus me-1"></i> Generate Invite Link
+            </button>
+            <a href="{{ url_for('invites.invite_list') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

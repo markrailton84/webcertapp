@@ -13,17 +13,35 @@ class TestDashboard:
         assert resp.status_code == 200
         assert b"Dashboard" in resp.data
 
-    def test_dashboard_shows_cert(self, auth_client, sample_cert):
+    def test_admin_dashboard_shows_all_certs(self, auth_client, sample_cert, team_cert):
+        """Admins see all certificates regardless of team."""
         resp = auth_client.get("/")
         assert sample_cert.common_name.encode() in resp.data
+        assert team_cert.common_name.encode() in resp.data
 
     def test_dashboard_shows_stats(self, auth_client, sample_cert, expired_cert):
         resp = auth_client.get("/")
         assert b"Total" in resp.data
 
-    def test_dashboard_empty_state(self, auth_client):
-        resp = auth_client.get("/")
+    def test_dashboard_empty_for_user_without_team(self, client, regular_user):
+        """A user with no team membership sees no certificates."""
+        client.post("/login", data={"username": "user1", "password": "userpass"})
+        resp = client.get("/")
         assert resp.status_code == 200
+        assert b"example.com" not in resp.data
+
+    def test_dashboard_shows_only_team_certs(self, client, team_member_user, team_membership, team_cert, sample_cert):
+        """A team member sees only their team's certificates."""
+        client.post("/login", data={"username": "teammember", "password": "memberpass"})
+        resp = client.get("/")
+        assert team_cert.common_name.encode() in resp.data
+        assert sample_cert.common_name.encode() not in resp.data
+
+    def test_global_admin_sees_all_certs(self, global_admin_client, sample_cert, team_cert):
+        """A global admin sees all certificates across all teams."""
+        resp = global_admin_client.get("/")
+        assert sample_cert.common_name.encode() in resp.data
+        assert team_cert.common_name.encode() in resp.data
 
 
 class TestCertDetail:
@@ -74,6 +92,33 @@ class TestCertAdd:
         }, follow_redirects=True)
         # Missing required fields should not create a cert
         assert resp.status_code == 200
+
+    def test_add_cert_auto_assigns_to_team(self, client, team_member_user, team_membership, team):
+        """Non-admin with one team has cert auto-assigned to that team."""
+        from app.models import Certificate
+        client.post("/login", data={"username": "teammember", "password": "memberpass"})
+        resp = client.post("/certs/add", data={
+            "common_name": "auto.example.com",
+            "not_after": "2027-01-01",
+        }, follow_redirects=True)
+        assert resp.status_code == 200
+        cert = Certificate.query.filter_by(common_name="auto.example.com").first()
+        assert cert is not None
+        assert cert.team_id == team.id
+
+    def test_add_cert_blocked_for_user_without_team(self, client, regular_user):
+        """A user with no team cannot add certificates."""
+        client.post("/login", data={"username": "user1", "password": "userpass"})
+        resp = client.post("/certs/add", data={
+            "common_name": "blocked.example.com",
+            "not_after": "2027-01-01",
+        }, follow_redirects=True)
+        assert b"do not have permission" in resp.data
+
+    def test_global_admin_cannot_add_certs(self, global_admin_client):
+        """Global admins are read-only — redirected away from add."""
+        resp = global_admin_client.get("/certs/add", follow_redirects=True)
+        assert b"read-only" in resp.data
 
 
 class TestCertEdit:

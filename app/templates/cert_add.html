@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Add Certificate — CertManager{% endblock %}
+{% block title %}Add Certificate — My Cert Manager{% endblock %}
 {% block content %}
 
 <div class="mb-4">
@@ -55,7 +55,7 @@
           <label class="form-label">Notes</label>
           <input type="text" name="notes" class="form-control">
         </div>
-        {% if addable_teams %}
+        {% if current_user.is_admin %}
         <div class="col-12">
           <label class="form-label">Assign to Team</label>
           <select name="team_id" class="form-select">
@@ -64,6 +64,25 @@
             <option value="{{ team.id }}">{{ team.name }}</option>
             {% endfor %}
           </select>
+        </div>
+        {% elif addable_teams|length == 1 %}
+        <input type="hidden" name="team_id" value="{{ addable_teams[0].id }}">
+        <div class="col-12">
+          <p class="text-muted small mb-0"><i class="bi bi-people me-1"></i>Certificate will be added to team <strong>{{ addable_teams[0].name }}</strong>.</p>
+        </div>
+        {% elif addable_teams|length > 1 %}
+        <div class="col-12">
+          <label class="form-label">Team <span class="text-danger">*</span></label>
+          <select name="team_id" class="form-select" required>
+            <option value="">— select a team —</option>
+            {% for team in addable_teams %}
+            <option value="{{ team.id }}">{{ team.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% else %}
+        <div class="col-12">
+          <div class="alert alert-warning mb-0">You are not a member of any team with permission to add certificates. Contact an admin or team owner.</div>
         </div>
         {% endif %}
       </div>

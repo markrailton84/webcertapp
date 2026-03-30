@@ -36,6 +36,9 @@ def _can_act_on_cert(cert, perm):
     """Check if current_user has a permission on a specific cert's team."""
     if current_user.is_admin:
         return True
+    if current_user.is_global_admin:
+        # Global admins are read-only across all teams
+        return False
     if cert.team_id is None:
         # Unowned certs: only admins and the original adder can modify
         return cert.added_by_id == current_user.id
@@ -47,19 +50,14 @@ def _can_act_on_cert(cert, perm):
 
 
 def _visible_certs():
-    """Return certs visible to the current user."""
-    if current_user.is_admin:
+    """Return certs visible to the current user.
+
+    Admins and global_admins see everything.
+    All other users see only their team's certificates.
+    """
+    if current_user.can_see_all:
         return Certificate.query.order_by(Certificate.not_after.asc()).all()
 
-    # Global users (role='user') see all certs
-    if current_user.role == "user":
-        # Check if they have any team ownership or membership
-        owned = Team.query.filter_by(owner_id=current_user.id).count()
-        memberships = TeamMember.query.filter_by(user_id=current_user.id).count()
-        if owned == 0 and memberships == 0:
-            return Certificate.query.order_by(Certificate.not_after.asc()).all()
-
-    # Team owners/members: see certs from their teams + any unowned certs they added
     team_ids = set()
     for t in Team.query.filter_by(owner_id=current_user.id).all():
         team_ids.add(t.id)
@@ -67,11 +65,11 @@ def _visible_certs():
         if m.can_view:
             team_ids.add(m.team_id)
 
+    if not team_ids:
+        return []
+
     return Certificate.query.filter(
-        db.or_(
-            Certificate.team_id.in_(team_ids),
-            db.and_(Certificate.team_id.is_(None), Certificate.added_by_id == current_user.id),
-        )
+        Certificate.team_id.in_(team_ids)
     ).order_by(Certificate.not_after.asc()).all()
 
 
@@ -113,6 +111,9 @@ def cert_detail(cert_id):
 @certs_bp.route("/certs/add", methods=["GET", "POST"])
 @login_required
 def cert_add():
+    if current_user.is_global_admin:
+        flash("Global admins have read-only access.", "warning")
+        return redirect(url_for("certs.dashboard"))
     addable_teams = _user_teams_with_perm("can_add")
 
     if request.method == "POST":
@@ -131,6 +132,16 @@ def cert_add():
             sans_list = [s.strip() for s in sans_raw.splitlines() if s.strip()]
 
             team_id = request.form.get("team_id", type=int) or None
+            if team_id is None and not current_user.is_admin:
+                # Auto-assign to the user's only addable team
+                if len(addable_teams) == 1:
+                    team_id = addable_teams[0].id
+                elif len(addable_teams) > 1:
+                    flash("Please select a team.", "danger")
+                    return render_template("cert_add.html", addable_teams=addable_teams)
+                else:
+                    flash("You do not have permission to add certificates to any team.", "danger")
+                    return render_template("cert_add.html", addable_teams=addable_teams)
 
             cert = Certificate(
                 common_name=request.form["common_name"].strip(),
@@ -165,6 +176,9 @@ def cert_add():
 @certs_bp.route("/certs/upload", methods=["GET", "POST"])
 @login_required
 def cert_upload():
+    if current_user.is_global_admin:
+        flash("Global admins have read-only access.", "warning")
+        return redirect(url_for("certs.dashboard"))
     addable_teams = _user_teams_with_perm("can_add")
 
     if request.method == "POST":
@@ -177,6 +191,15 @@ def cert_upload():
         notes = request.form.get("notes", "").strip()
         tags = request.form.get("tags", "").strip()
         team_id = request.form.get("team_id", type=int) or None
+        if team_id is None and not current_user.is_admin:
+            if len(addable_teams) == 1:
+                team_id = addable_teams[0].id
+            elif len(addable_teams) > 1:
+                flash("Please select a team.", "danger")
+                return render_template("cert_upload.html", addable_teams=addable_teams)
+            else:
+                flash("You do not have permission to add certificates to any team.", "danger")
+                return render_template("cert_upload.html", addable_teams=addable_teams)
 
         try:
             cert_data = parse_cert_file(file)
@@ -213,6 +236,9 @@ def cert_upload():
 @certs_bp.route("/certs/fetch", methods=["GET", "POST"])
 @login_required
 def cert_fetch():
+    if current_user.is_global_admin:
+        flash("Global admins have read-only access.", "warning")
+        return redirect(url_for("certs.dashboard"))
     addable_teams = _user_teams_with_perm("can_add")
     fetched = None
 
@@ -234,6 +260,15 @@ def cert_fetch():
                 notes = request.form.get("notes", "").strip()
                 tags = request.form.get("tags", "").strip()
                 team_id = request.form.get("team_id", type=int) or None
+                if team_id is None and not current_user.is_admin:
+                    if len(addable_teams) == 1:
+                        team_id = addable_teams[0].id
+                    elif len(addable_teams) > 1:
+                        flash("Please select a team.", "danger")
+                        return render_template("cert_fetch.html", fetched=fetched, addable_teams=addable_teams)
+                    else:
+                        flash("You do not have permission to add certificates to any team.", "danger")
+                        return render_template("cert_fetch.html", fetched=fetched, addable_teams=addable_teams)
                 cert = Certificate(
                     common_name=cert_data["common_name"],
                     issuer=cert_data.get("issuer", ""),

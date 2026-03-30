@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Invites — My Cert Manager{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-envelope-plus me-2"></i>Invites</h2>
+  <a href="{{ url_for('invites.invite_create') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> New Invite
+  </a>
+</div>
+
+{% if invites %}
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>Email</th>
+          <th>Team</th>
+          <th>Permissions</th>
+          <th>Created By</th>
+          <th>Expires</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for invite in invites %}
+        <tr>
+          <td>{{ invite.email }}</td>
+          <td>{{ invite.team.name }}</td>
+          <td class="small text-muted">
+            {% if invite.can_view %}<span class="badge bg-secondary me-1">view</span>{% endif %}
+            {% if invite.can_add %}<span class="badge bg-secondary me-1">add</span>{% endif %}
+            {% if invite.can_edit %}<span class="badge bg-secondary me-1">edit</span>{% endif %}
+            {% if invite.can_delete %}<span class="badge bg-danger me-1">delete</span>{% endif %}
+          </td>
+          <td>{{ invite.created_by.username }}</td>
+          <td class="small">{{ invite.expires_at.strftime('%Y-%m-%d %H:%M') }} UTC</td>
+          <td>
+            {% if invite.status == 'pending' %}
+              <span class="badge bg-success">Pending</span>
+            {% elif invite.status == 'used' %}
+              <span class="badge bg-primary">Used</span>
+            {% else %}
+              <span class="badge bg-secondary">Expired</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            {% if invite.status == 'pending' %}
+            <form method="post" action="{{ url_for('invites.invite_revoke', invite_id=invite.id) }}"
+                  onsubmit="return confirm('Revoke invite for {{ invite.email }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-x-circle"></i> Revoke
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-envelope display-4 d-block mb-3"></i>
+  <p>No invites yet. Create one to invite someone to a team.</p>
+  <a href="{{ url_for('invites.invite_create') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i> Create Invite
+  </a>
+</div>
+{% endif %}
+{% endblock %}

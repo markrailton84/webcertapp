@@ -43,7 +43,7 @@ def logout():
 @auth_bp.route("/users")
 @login_required
 def users():
-    if not current_user.is_admin:
+    if not current_user.is_manager:
         flash("Admin access required.", "danger")
         return redirect(url_for("certs.dashboard"))
     all_users = User.query.order_by(User.created_at.desc()).all()
@@ -64,35 +64,56 @@ def users():
 @auth_bp.route("/users/add", methods=["GET", "POST"])
 @login_required
 def add_user():
-    if not current_user.is_admin:
+    if not current_user.is_manager:
         flash("Admin access required.", "danger")
         return redirect(url_for("certs.dashboard"))
+
+    teams = Team.query.order_by(Team.name).all()
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         role = request.form.get("role", "user")
+        team_id = request.form.get("team_id", type=int) or None
 
-        if User.query.filter_by(username=username).first():
+        requires_team = role == "user"
+        if requires_team and not team_id:
+            flash("A team must be selected for User role.", "danger")
+        elif User.query.filter_by(username=username).first():
             flash("Username already exists.", "danger")
         elif User.query.filter_by(email=email).first():
             flash("Email already exists.", "danger")
         else:
-            user = User(username=username, email=email, role=role)
-            user.set_password(password)
-            db.session.add(user)
-            db.session.commit()
-            flash(f"User '{username}' created.", "success")
-            return redirect(url_for("auth.users"))
+            team = Team.query.get(team_id)
+            if not team:
+                flash("Selected team does not exist.", "danger")
+            else:
+                user = User(username=username, email=email, role=role)
+                user.set_password(password)
+                db.session.add(user)
+                db.session.flush()  # get user.id before commit
 
-    return render_template("user_form.html", action="Add")
+                member = TeamMember(
+                    team_id=team.id,
+                    user_id=user.id,
+                    can_view=bool(request.form.get("can_view")),
+                    can_add=bool(request.form.get("can_add")),
+                    can_edit=bool(request.form.get("can_edit")),
+                    can_delete=bool(request.form.get("can_delete")),
+                )
+                db.session.add(member)
+                db.session.commit()
+                flash(f"User '{username}' created and added to '{team.name}'.", "success")
+                return redirect(url_for("auth.users"))
+
+    return render_template("user_form.html", action="Add", teams=teams)
 
 
 @auth_bp.route("/users/<int:user_id>/delete", methods=["POST"])
 @login_required
 def delete_user(user_id):
-    if not current_user.is_admin:
+    if not current_user.is_manager:
         flash("Admin access required.", "danger")
         return redirect(url_for("certs.dashboard"))
 

@@ -1,7 +1,9 @@
 """Tests for the REST API blueprint — /api/v1/.
 
-API keys are now per-team. Every authenticated request is scoped to the
-team whose api_key matches the X-API-Key header.
+Two types of API keys:
+  - Per-team key: scopes all operations to that team's certificates.
+  - Global key (Settings.api_key): read/write access across all teams;
+    write operations require team_id in the request body.
 """
 
 import datetime
@@ -10,7 +12,12 @@ from unittest.mock import patch
 
 import pytest
 
-from app.models import Certificate, Team, db as _db
+from app.models import Certificate, Settings, Team, db as _db
+
+
+def _global_headers(app):
+    with app.app_context():
+        return {"X-API-Key": Settings.get().api_key}
 
 
 # ---------------------------------------------------------------------------
@@ -356,3 +363,48 @@ class TestDeleteCert:
     def test_delete_missing_cert(self, client, db, team):
         resp = client.delete("/api/v1/certs/99999", headers=_headers(team))
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Global API key (Settings)
+# ---------------------------------------------------------------------------
+
+class TestGlobalApiKey:
+    def test_global_key_lists_all_certs(self, client, app, db, team_cert, sample_cert):
+        """Global key returns certs from all teams."""
+        resp = client.get("/api/v1/certs", headers=_global_headers(app))
+        data = resp.get_json()
+        ids = [c["id"] for c in data["certs"]]
+        assert team_cert.id in ids
+        assert sample_cert.id in ids
+
+    def test_global_key_gets_any_cert(self, client, app, db, team_cert):
+        resp = client.get(f"/api/v1/certs/{team_cert.id}", headers=_global_headers(app))
+        assert resp.status_code == 200
+
+    def test_global_key_add_requires_team_id(self, client, app, db):
+        """Adding a cert with the global key requires team_id."""
+        resp = client.post(
+            "/api/v1/certs",
+            headers={**_global_headers(app), "Content-Type": "application/json"},
+            data=json.dumps({"common_name": "global.example.com", "not_after": "2027-01-01T00:00:00Z"}),
+        )
+        assert resp.status_code == 422
+        assert "team_id" in resp.get_json()["error"]
+
+    def test_global_key_add_with_team_id(self, client, app, db, team):
+        resp = client.post(
+            "/api/v1/certs",
+            headers={**_global_headers(app), "Content-Type": "application/json"},
+            data=json.dumps({
+                "common_name": "global.example.com",
+                "not_after": "2027-01-01T00:00:00Z",
+                "team_id": team.id,
+            }),
+        )
+        assert resp.status_code == 201
+        assert resp.get_json()["team_id"] == team.id
+
+    def test_global_key_delete_any_cert(self, client, app, db, team_cert):
+        resp = client.delete(f"/api/v1/certs/{team_cert.id}", headers=_global_headers(app))
+        assert resp.status_code == 200

@@ -41,6 +41,7 @@ def create_app(test_config=None):
     from .routes.api import api_bp
     from .routes.auth import auth_bp
     from .routes.certs import certs_bp
+    from .routes.invites import invites_bp
     from .routes.settings import settings_bp
     from .routes.teams import teams_bp
 
@@ -48,6 +49,7 @@ def create_app(test_config=None):
     app.register_blueprint(api_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(certs_bp)
+    app.register_blueprint(invites_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(teams_bp)
 

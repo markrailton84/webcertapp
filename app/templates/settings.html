@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Settings — CertManager{% endblock %}
+{% block title %}Settings — My Cert Manager{% endblock %}
 {% block content %}
 
 <h4 class="mb-4"><i class="bi bi-gear me-2"></i>Settings</h4>
@@ -51,7 +51,7 @@
             </div>
             <div class="col-12">
               <label class="form-label">From Address</label>
-              <input type="text" name="smtp_from" class="form-control" value="{{ settings.smtp_from or '' }}" placeholder="CertManager <alerts@example.com>">
+              <input type="text" name="smtp_from" class="form-control" value="{{ settings.smtp_from or '' }}" placeholder="My Cert Manager <alerts@example.com>">
             </div>
             <div class="col-12">
               <div class="form-check">
@@ -106,13 +106,30 @@
   </div>
 </form>
 
-<!-- API Key info -->
+<!-- Global API Key -->
 <div class="row g-4 mt-1">
   <div class="col-12">
     <div class="card shadow-sm">
-      <div class="card-header"><i class="bi bi-key me-2"></i>REST API Keys</div>
+      <div class="card-header"><i class="bi bi-key me-2"></i>Global REST API Key</div>
       <div class="card-body">
-        <p class="text-muted mb-0">API keys are now managed per-team. Each team has its own key that scopes API operations to that team's certificates. Go to <strong>Teams &gt; [Team Name] &gt; Settings</strong> to view or regenerate a team's API key.</p>
+        <p class="text-muted mb-2">The global key has read and write access across <strong>all teams</strong>. Use it for admin-level integrations. Write operations (add/bulk/fetch) must include a <code>team_id</code> in the request body.</p>
+        <p class="text-muted small mb-3">Per-team keys are managed under <strong>Teams &gt; [Team Name] &gt; Settings</strong>.</p>
+        <div class="input-group" style="max-width:560px">
+          <input type="text" class="form-control font-monospace" id="globalApiKey"
+                 value="{{ settings.api_key }}" readonly>
+          <button class="btn btn-outline-secondary" type="button"
+                  onclick="navigator.clipboard.writeText(document.getElementById('globalApiKey').value)">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+      </div>
+      <div class="card-footer">
+        <form method="post" action="{{ url_for('settings.regenerate_api_key') }}"
+              onsubmit="return confirm('Regenerate global API key? Any integrations using it will stop working.');">
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Key
+          </button>
+        </form>
       </div>
     </div>
   </div>
